@@ -1,0 +1,71 @@
+{
+  "name": "@bedrock-engineer/gef-parser",
+  "version": "0.1.0",
+  "sideEffects": false,
+  "description": "Parse GEF (Geotechnical Exchange Format) files for CPT and Borehole data",
+  "type": "module",
+  "homepage": "https://github.com/bedrock-engineer/gef-parser#readme",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && mkdir -p dist/wasm && cp src/wasm/* dist/wasm/",
+    "dev": "tsc --watch",
+    "test": "npm run build && node test/test.js",
+    "prepublishOnly": "npm run build",
+    "knip": "knip",
+    "lint": "eslint src",
+    "format": "prettier -w src"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "proj4": "^2.20.1",
+    "typescript-eslint": "^8.49.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/proj4": "^2.5.5",
+    "knip": "^5.73.3",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
+  },
+  "keywords": [
+    "gef",
+    "geotechnical",
+    "cpt",
+    "borehole",
+    "soil",
+    "cone-penetration-test"
+  ],
+  "author": {
+    "name": "Jules Blom",
+    "url": "https://bedrock.engineer",
+    "email": "jules.blom@bedrock.engineer"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bedrock-engineer/gef-parser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bedrock-engineer/gef-parser/issues",
+    "email": "jules.blom@bedrock.engineer"
+  },
+  "license": "Apache-2.0",
+  "prettier": {
+    "semi": true,
+    "trailingComma": "all",
+    "singleQuote": false,
+    "printWidth": 80,
+    "tabWidth": 2,
+    "endOfLine": "lf"
+  }
+}
