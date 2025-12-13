@@ -134,68 +134,41 @@ const xyidSchema = z
     z.string().trim(),
     z.coerce.number(),
     z.coerce.number(),
-    z.coerce.number().optional(),
-    z.coerce.number().optional(),
+    z.coerce.number().nonnegative().optional(),
+    z.coerce.number().nonnegative().optional(),
   ])
-  .transform(([coordinateSystem, x, y, deltaX, deltaY]) => ({
-    coordinateSystem,
-    x,
-    y,
-    // Default to 0.01 if missing or invalid
-    deltaX: deltaX ?? 0.01,
-    deltaY: deltaY ?? 0.01,
-  }))
-  .pipe(
-    z.object({
-      coordinateSystem: coordinateSystemCodeSchema.catch("31000"),
-      x: z.number({
-        message: "X coordinate must be a valid number",
-      }),
-      y: z.number({
-        message: "Y coordinate must be a valid number",
-      }),
-      deltaX: z.number().nonnegative({
-        message: "X uncertainty (deltaX) must be a non-negative number",
-      }),
-      deltaY: z.number().nonnegative({
-        message: "Y uncertainty (deltaY) must be a non-negative number",
-      }),
-    }),
-  );
+  .transform(([coordinateSystem, x, y, deltaX, deltaY]) => {
+    // Validate coordinate system, default to RD if invalid
+    const validatedCoordinateSystem = coordinateSystemCodeSchema
+      .catch("31000")
+      .parse(coordinateSystem);
+
+    return {
+      coordinateSystem: validatedCoordinateSystem,
+      x,
+      y,
+      deltaX,
+      deltaY,
+    };
+  });
 
 export type XYID = z.infer<typeof xyidSchema>;
 
 // Height Reference System
 // Default to NAP (31000) if coordinate system is invalid or unrecognized
 const zidSchema = z
-  .tuple([
-    z.string().trim(),
-    z
-      .string()
-      .trim()
-      .transform((s) => (s ? z.coerce.number().parse(s) : 0)),
-    z
-      .string()
-      .trim()
-      .optional()
-      .transform((s) => (s ? z.coerce.number().parse(s) : 0.01)),
-  ])
-  .transform(([code, height, deltaZ]) => ({
-    code,
-    height,
-    deltaZ,
-  }))
-  .pipe(
-    z.object({
-      code: heightSystemCodeSchema.catch("31000"),
-      height: z.number({
-        message: "Surface elevation must be a valid number",
-      }),
-      deltaZ: z.number().nonnegative({
-        message: "Height uncertainty (deltaZ) must be a non-negative number",
-      }),
-    }),
-  );
+  .array(z.string().trim())
+  .min(2, { message: "#ZID must have at least 2 values: code and height" })
+  .max(3, { message: "#ZID must have at most 3 values: code, height, deltaZ" })
+  .transform((arr) => {
+    const code = heightSystemCodeSchema.catch("31000").parse(arr[0]);
+    const height = arr[1] ? z.coerce.number().parse(arr[1]) : 0;
+    const deltaZ =
+      arr[2] !== undefined && arr[2] !== ""
+        ? z.coerce.number().nonnegative().parse(arr[2])
+        : undefined;
+    return { code, height, deltaZ };
+  });
 
 export type ZID = z.infer<typeof zidSchema>;
 
