@@ -222,13 +222,16 @@ export function processCommonFields(
   };
 }
 
+interface MeasurementVar {
+  id: number;
+  value: number | undefined;
+  unit: string;
+}
+
 /**
  * Get a measurement variable object by ID from parsed headers
  */
-function getMeasurementVar(
-  measurementVars: Array<{ id: number; value: number; unit: string }>,
-  id: number,
-) {
+function getMeasurementVar(measurementVars: Array<MeasurementVar>, id: number) {
   return measurementVars.find((v) => v.id === id);
 }
 
@@ -236,7 +239,7 @@ function getMeasurementVar(
  * Get a measurement variable numeric value by ID from parsed headers
  */
 export function getMeasurementVarValue(
-  measurementVars: Array<{ id: number; value: number; unit: string }>,
+  measurementVars: Array<MeasurementVar>,
   id: number,
 ): number | undefined {
   const mv = getMeasurementVar(measurementVars, id);

@@ -158,7 +158,7 @@ function processBoreMeasurementVar(
   MEASUREMENTVAR:
     | Array<{
         id: number;
-        value: number;
+        value: number | undefined;
         unit: string;
         description: string;
       }>
@@ -170,6 +170,11 @@ function processBoreMeasurementVar(
     for (const mv of MEASUREMENTVAR) {
       const varInfo = boreMeasurementVariables[mv.id];
       if (!varInfo) {
+        continue;
+      }
+
+      // Skip if value is undefined (missing value indicated by "-" in GEF file)
+      if (mv.value === undefined) {
         continue;
       }
 
@@ -384,7 +389,9 @@ export function parseGefBoreData(
   const columnInfo = headers.COLUMNINFO ?? [];
   const warnings: Array<string> = [];
 
-  const recordSeparator = headers.RECORDSEPARATOR ?? "!";
+  // Per GEF spec: default record separator is CR/LF
+  // Handle both \r\n (CR/LF) and \n (LF) for cross-platform compatibility
+  const recordSeparator = headers.RECORDSEPARATOR ?? /\r?\n/;
   const records = dataString
     .split(recordSeparator)
     .map((r) => r.trim())
@@ -537,7 +544,8 @@ export function parseGefBoreSpecimens(
 
   // Get number of specimens from SPECIMENVAR id=1
   const countVar = specimenVars.find((v) => v.id === 1);
-  const specimenCount = countVar ? Math.floor(countVar.value) : 0;
+  const specimenCount =
+    countVar?.value !== undefined ? Math.floor(countVar.value) : 0;
 
   if (specimenCount === 0) {
     return [];

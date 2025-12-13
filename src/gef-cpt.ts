@@ -78,6 +78,11 @@ export function processCptMetadata(
         continue;
       }
 
+      // Skip if value is undefined (missing value indicated by "-" in GEF file)
+      if (mv.value === undefined) {
+        continue;
+      }
+
       const key = getMeasurementVarKey(mv.id, measurementVarMetadata);
 
       if (key) {
@@ -162,20 +167,24 @@ export function parsePreExcavationLayers(
     return [];
   }
 
-  // Sort by ID to ensure correct order
-  const sorted = [...specimenVars].sort((a, b) => a.id - b.id);
+  // Filter out layers with missing values and sort by ID to ensure correct order
+  const sorted = [...specimenVars]
+    .filter((sv) => sv.value !== undefined)
+    .sort((a, b) => a.id - b.id);
 
   const layers: Array<PreExcavationLayer> = [];
   let previousDepth = 0;
 
   for (const layer of sorted) {
+    // Type assertion safe here because we filtered out undefined values above
+    const depthBottom = layer.value as number;
     layers.push({
       depthTop: previousDepth,
-      depthBottom: layer.value,
+      depthBottom: depthBottom,
       description: layer.description,
       unit: layer.unit,
     });
-    previousDepth = layer.value;
+    previousDepth = depthBottom;
   }
 
   return layers;
@@ -316,7 +325,9 @@ export function parseGefCptData(dataString: string, headersMap: GEFHeadersMap) {
   const headers = parseGefCptHeaders(headersMap);
 
   const columnSeparator = headers.COLUMNSEPARATOR ?? /\s+/;
-  const recordSeparator = headers.RECORDSEPARATOR ?? "!";
+  // Per GEF spec: default record separator is CR/LF
+  // Handle both \r\n (CR/LF) and \n (LF) for cross-platform compatibility
+  const recordSeparator = headers.RECORDSEPARATOR ?? /\r?\n/;
   const columnInfo = headers.COLUMNINFO ?? [];
   const warnings: Array<string> = [];
 

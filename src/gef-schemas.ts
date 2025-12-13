@@ -344,26 +344,34 @@ const columnInfoSchema = z
 export type ColumnInfo = z.infer<typeof columnInfoSchema>;
 
 const measurementVarSchema = z
-  .tuple([
-    z.coerce.number().int(),
-    z.coerce.number(),
-    z.string().trim().optional(),
-    z.string().trim().optional(),
-  ])
-  .transform(([id, value, unit, description]) => ({
-    id,
-    value,
-    unit: unit ?? "-",
-    description: description ?? "",
-  }))
-  .pipe(
-    z.object({
-      id: z.number().int().min(1).max(1500),
-      value: z.number(),
-      unit: z.string(),
-      description: z.string(),
-    }),
-  );
+  .array(z.string().trim())
+  .min(2)
+  .transform((arr) => {
+    const idStr = arr[0];
+    const valueStr = arr[1];
+    const unit = arr[2];
+    // Join all remaining elements as description (handles commas in descriptions)
+    const description = arr.slice(3).join(", ");
+
+    const id = z.coerce.number().int().min(1).max(1500).parse(idStr);
+
+    // Handle missing values
+    // "-" is the standard way to indicate missing/unavailable data in GEF files
+    // Empty strings should also be treated as missing (not converted to 0)
+    let value: number | undefined;
+    if (valueStr === "-" || valueStr === "") {
+      value = undefined;
+    } else {
+      value = z.coerce.number().parse(valueStr);
+    }
+
+    return {
+      id,
+      value,
+      unit: unit ?? "-",
+      description: description,
+    };
+  });
 
 export type MeasurementVar = z.infer<typeof measurementVarSchema>;
 
@@ -387,26 +395,34 @@ export type MeasurementText = z.infer<typeof measurementTextSchema>;
 
 // SPECIMENVAR schema - same structure as MEASUREMENTVAR
 const specimenVarSchema = z
-  .tuple([
-    z.coerce.number().int(),
-    z.coerce.number(),
-    z.string().trim().optional(),
-    z.string().trim().optional(),
-  ])
-  .transform(([id, value, unit, description]) => ({
-    id,
-    value,
-    unit: unit ?? "-",
-    description: description ?? "",
-  }))
-  .pipe(
-    z.object({
-      id: z.number().int().min(1).max(1410),
-      value: z.number(),
-      unit: z.string(),
-      description: z.string(),
-    }),
-  );
+  .array(z.string().trim())
+  .min(2)
+  .transform((arr) => {
+    const idStr = arr[0];
+    const valueStr = arr[1];
+    const unit = arr[2];
+    // Join all remaining elements as description (handles commas in descriptions)
+    const description = arr.slice(3).join(", ");
+
+    const id = z.coerce.number().int().min(1).max(1410).parse(idStr);
+
+    // Handle missing values
+    // "-" is the standard way to indicate missing/unavailable data in GEF files
+    // Empty strings should also be treated as missing (not converted to 0)
+    let value: number | undefined;
+    if (valueStr === "-" || valueStr === "") {
+      value = undefined;
+    } else {
+      value = z.coerce.number().parse(valueStr);
+    }
+
+    return {
+      id,
+      value,
+      unit: unit ?? "-",
+      description: description,
+    };
+  });
 
 export type SpecimenVar = z.infer<typeof specimenVarSchema>;
 
