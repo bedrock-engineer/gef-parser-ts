@@ -4,7 +4,7 @@
   "sideEffects": false,
   "description": "Parse GEF (Geotechnical Exchange Format) files for CPT and Borehole data",
   "type": "module",
-  "homepage": "https://github.com/bedrock-engineer/gef-parser#readme",
+  "homepage": "https://github.com/bedrock-engineer/gef-parser-ts",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -26,17 +26,17 @@
     "format": "prettier -w src"
   },
   "dependencies": {
-    "@eslint/js": "^9.39.1",
-    "eslint": "^9.39.1",
     "proj4": "^2.20.1",
-    "typescript-eslint": "^8.49.0",
-    "zod": "^4.1.12"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/proj4": "^2.5.5",
+    "eslint": "^10.0.0",
     "knip": "^5.73.3",
     "prettier": "^3.7.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.55.0"
   },
   "keywords": [
     "gef",
@@ -53,10 +53,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bedrock-engineer/gef-parser.git"
+    "url": "git+https://github.com/bedrock-engineer/gef-parser-ts.git"
   },
   "bugs": {
-    "url": "https://github.com/bedrock-engineer/gef-parser/issues",
+    "url": "https://github.com/bedrock-engineer/gef-parser-ts/issues",
     "email": "jules.blom@bedrock.engineer"
   },
   "license": "Apache-2.0",
