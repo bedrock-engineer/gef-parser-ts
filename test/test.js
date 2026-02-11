@@ -34,7 +34,8 @@ async function runTests() {
 
   const testFiles = [
     'example_cpt.gef',
-    'example_bore.gef'
+    'example_bore.gef',
+    'example_diss.gef'
   ];
 
   let passed = 0;
@@ -57,7 +58,15 @@ async function runTests() {
         throw new Error('Result missing fileType field');
       }
 
-      console.log(`  ✓ Parsed successfully (type: ${result.fileType})`);
+      // DISS-specific checks
+      if (result.fileType === 'DISS') {
+        if (!Array.isArray(result.data) || result.data.length === 0) {
+          throw new Error('DISS result has no data rows');
+        }
+        console.log(`  ✓ Parsed successfully (type: ${result.fileType}, rows: ${result.data.length}, parent: ${result.parent?.reference ?? 'none'})`);
+      } else {
+        console.log(`  ✓ Parsed successfully (type: ${result.fileType})`);
+      }
       passed++;
     } catch (error) {
       console.error(`  ✗ Failed: ${error.message}`);

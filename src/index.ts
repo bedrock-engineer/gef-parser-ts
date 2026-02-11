@@ -37,6 +37,14 @@ export {
 } from "./gef-bore.js";
 
 export {
+  parseGefDissData,
+  processDissMetadata,
+  generateDissWarnings,
+} from "./gef-diss.js";
+
+export type { GefDissData, DissRow } from "./gef-diss.js";
+
+export {
   SPECIMEN_CODES,
   SpecimenCode,
   BoreMeasurementTextVariable,
@@ -56,6 +64,8 @@ export type { GefBoreData, BoreLayer, BoreSpecimen } from "./gef-bore.js";
 export type {
   GefCptHeaders,
   GefBoreHeaders,
+  GefDissHeaders,
+  Parent,
   ColumnInfo,
   MeasurementVar,
   MeasurementText,

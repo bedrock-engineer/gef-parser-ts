@@ -177,7 +177,7 @@ export function parsePreExcavationLayers(
 
   for (const layer of sorted) {
     // Type assertion safe here because we filtered out undefined values above
-    const depthBottom = layer.value as number;
+    const depthBottom = layer.value!;
     layers.push({
       depthTop: previousDepth,
       depthBottom: depthBottom,

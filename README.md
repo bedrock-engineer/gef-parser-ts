@@ -11,14 +11,15 @@ This parser handles the GEF format specification, coordinate transformations, an
 ## Features
 
 - Parse GEF-CPT (Cone Penetration Test) files
+- Parse GEF-DISS (Dissipation Test) files
 - Parse GEF-BORE (Borehole) files with soil layers and specimens
 - Automatic GEF type detection
 - Support for [Dutch (BRO/VOTB)](https://votb.nl/wp-content/uploads/2016/02/180712-tekst-GEF-1.1.3-BRO-converter.pdf) and [Belgian (DOV) extensions](https://www.milieuinfo.be/confluence/x/5PQlC)
 - Coordinate system conversion to WGS84
 - Depth correction for inclinometer data
-- Full TypeScript support with type definitions
+- TypeScript support with type definitions
 
-GEF-DISS and GEF-SIEVE are not supported.
+GEF-SIEVE files are not supported.
 
 ## Installation
 

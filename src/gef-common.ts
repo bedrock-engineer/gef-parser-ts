@@ -13,20 +13,27 @@ import {
   processCptMetadata,
   type GefCptData,
 } from "./gef-cpt.js";
+import {
+  generateDissWarnings,
+  parseGefDissData,
+  processDissMetadata,
+  type GefDissData,
+} from "./gef-diss.js";
 import { formatGefDate, formatGefTime } from "./gef-metadata-processed.js";
 import {
   COORDINATE_SYSTEMS,
   HEIGHT_SYSTEMS,
   type GefBoreHeaders,
   type GefCptHeaders,
+  type GefDissHeaders,
 } from "./gef-schemas.js";
 import initGefFileToMap, { parse_gef_wasm } from "./wasm/gef_file_to_map.js";
 
 export type GEFHeadersMap = Map<string, Array<Array<string>>>;
 
-export type GefFileType = "CPT" | "BORE";
+export type GefFileType = "CPT" | "BORE" | "DISS";
 
-export type GefData = GefCptData | GefBoreData;
+export type GefData = GefCptData | GefBoreData | GefDissData;
 
 export interface ProcessedItemMetadata {
   id: number;
@@ -133,7 +140,7 @@ interface CommonProcessedFields {
 export function processCommonFields(
   filename: string,
   fileType: GefFileType,
-  headers: GefCptHeaders | GefBoreHeaders,
+  headers: GefCptHeaders | GefBoreHeaders | GefDissHeaders,
 ): CommonProcessedFields {
   let wgs84: WGS84Coords | null = null;
   let wgs84Error: string | null = null;
@@ -250,13 +257,13 @@ function detectFileType(reportCode: string): GefFileType {
   const lowercaseReportCode = reportCode.toLowerCase();
 
   // Check for unsupported file types
-  if (lowercaseReportCode.includes("diss")) {
-    throw new Error("dissipationTestNotSupported");
-  }
   if (lowercaseReportCode.includes("siev")) {
     throw new Error("sieveTestNotSupported");
   }
 
+  if (lowercaseReportCode.includes("diss")) {
+    return "DISS";
+  }
   if (lowercaseReportCode.includes("bore")) {
     return "BORE";
   }
@@ -266,7 +273,7 @@ function detectFileType(reportCode: string): GefFileType {
 // Generate warnings common to both CPT and BORE files
 function generateCommonWarnings(
   filename: string,
-  headers: GefCptHeaders | GefBoreHeaders,
+  headers: GefCptHeaders | GefBoreHeaders | GefDissHeaders,
   headersMap: GEFHeadersMap,
 ): Array<string> {
   const warnings: Array<string> = [];
@@ -332,6 +339,31 @@ export async function parseGefFile(file: File): Promise<GefData> {
     gefMap.headers.headers.get("REPORTCODE")?.[0]?.[0] ?? "cpt";
 
   const fileType = detectFileType(reportCode);
+
+  if (fileType === "DISS") {
+    const {
+      data,
+      columnInfo,
+      headers,
+      warnings: parseWarnings,
+    } = parseGefDissData(gefMap.data, gefMap.headers.headers);
+    const warnings = [
+      ...parseWarnings,
+      ...generateCommonWarnings(file.name, headers, gefMap.headers.headers),
+      ...generateDissWarnings(file.name, headers),
+    ];
+    const processed = processDissMetadata(file.name, headers);
+
+    return {
+      fileType,
+      data,
+      headers,
+      columnInfo,
+      parent: headers.PARENT,
+      warnings,
+      processed,
+    };
+  }
 
   if (fileType === "BORE") {
     const {

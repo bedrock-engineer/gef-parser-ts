@@ -641,6 +641,59 @@ const gefBaseHeadersSchema = z.object({
     ),
 });
 
+// #PARENT= sReference[, value, sUnit, sQuantity[, iQuantityNumber[, sExplanation]]]
+// Per GEF-CPT 1.1.0 spec section 2.6.7: only sReference is mandatory
+const parentSchema = z
+  .array(z.string().trim())
+  .min(1)
+  .transform((arr) => {
+    const reference = arr[0] ?? "";
+
+    // value, unit, and quantity form an optional group
+    let value: number | undefined;
+    if (arr[1] !== undefined && arr[1] !== "") {
+      const parsed = z.coerce.number().safeParse(arr[1]);
+      value = parsed.success ? parsed.data : undefined;
+    }
+    const unit = arr[2] ?? undefined;
+    const quantity = arr[3] ?? undefined;
+
+    // quantityNumber and explanation are optional, nested after the value group
+    let quantityNumber: number | undefined;
+    if (arr[4] !== undefined && arr[4] !== "") {
+      const parsed = z.coerce.number().int().safeParse(arr[4]);
+      quantityNumber = parsed.success ? parsed.data : undefined;
+    }
+    const explanation = arr[5] ?? undefined;
+
+    return {
+      reference,
+      value,
+      unit,
+      quantity,
+      quantityNumber,
+      explanation,
+    };
+  });
+
+export type Parent = z.infer<typeof parentSchema>;
+
+const gefDissHeadersSchema = gefBaseHeadersSchema.extend({
+  PARENT: z
+    .array(z.array(z.string()).min(1))
+    .optional()
+    .transform((arr) => (arr?.[0] ? parentSchema.parse(arr[0]) : undefined)),
+
+  COLUMNMINMAX: z
+    .array(z.tuple([z.coerce.number(), z.coerce.number(), z.coerce.number()]))
+    .optional()
+    .transform((arr) =>
+      arr?.map(([columnNumber, min, max]) => ({ columnNumber, min, max })),
+    ),
+});
+
+export type GefDissHeaders = z.infer<typeof gefDissHeadersSchema>;
+
 const gefCptHeadersSchema = gefBaseHeadersSchema.extend({
   COLUMNMINMAX: z
     .array(z.tuple([z.coerce.number(), z.coerce.number(), z.coerce.number()]))
@@ -684,6 +737,18 @@ export function parseGefCptHeaders(headersMap: GEFHeadersMap): GefCptHeaders {
 export function parseGefBoreHeaders(headersMap: GEFHeadersMap): GefBoreHeaders {
   const headersObj = Object.fromEntries(headersMap);
   const result = gefBoreHeadersSchema.safeParse(headersObj);
+
+  if (!result.success) {
+    const errors = result.error.issues.map((issue) => formatIssue(issue));
+    throw new Error(errors.join("\n"));
+  }
+
+  return result.data;
+}
+
+export function parseGefDissHeaders(headersMap: GEFHeadersMap): GefDissHeaders {
+  const headersObj = Object.fromEntries(headersMap);
+  const result = gefDissHeadersSchema.safeParse(headersObj);
 
   if (!result.success) {
     const errors = result.error.issues.map((issue) => formatIssue(issue));
