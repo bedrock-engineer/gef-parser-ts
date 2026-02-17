@@ -2,7 +2,7 @@
  * Generate a translation key from a description string
  * Converts "End depth of penetration test" → "endDepthOfPenetrationTest"
  */
-function descriptionToKey(description: string): string {
+export function descriptionToKey(description: string): string {
   return description
     .split(/[\s,()/-]+/) // Split on spaces, commas, parentheses, slashes, hyphens
     .filter((word) => word.length > 0)

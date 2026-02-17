@@ -1,6 +1,6 @@
 {
   "name": "@bedrock-engineer/gef-parser",
-  "version": "0.1.3-beta.0",
+  "version": "0.1.3-beta.2",
   "sideEffects": false,
   "description": "Parse GEF (Geotechnical Exchange Format) files for CPT and Borehole data",
   "type": "module",
@@ -11,6 +11,26 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./cpt": {
+      "types": "./dist/cpt.d.ts",
+      "default": "./dist/cpt.js"
+    },
+    "./bore": {
+      "types": "./dist/bore.d.ts",
+      "default": "./dist/bore.js"
+    },
+    "./bore-codes": {
+      "types": "./dist/bore-codes.d.ts",
+      "default": "./dist/bore-codes.js"
+    },
+    "./diss": {
+      "types": "./dist/diss.d.ts",
+      "default": "./dist/diss.js"
+    },
+    "./coordinates": {
+      "types": "./dist/coordinates-public.d.ts",
+      "default": "./dist/coordinates-public.js"
     }
   },
   "files": [
@@ -32,7 +52,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/proj4": "^2.5.5",
-    "eslint": "^10.0.0",
+    "eslint": "^9.39.2",
     "knip": "^5.73.3",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3",

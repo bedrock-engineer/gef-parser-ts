@@ -135,7 +135,7 @@ function calculateElevation(
   });
 }
 
-export type Row = Record<
+export type CptRow = Record<
   string,
   number | boolean | string | null | undefined
 > & {
@@ -159,7 +159,7 @@ export function addComputedDepthColumns(
   columnInfo: Array<ColumnInfo>,
   zid: ZID | undefined,
   measurementVars: Array<MeasurementVar> | undefined,
-): Array<Row> {
+): Array<CptRow> {
   const preExcavatedDepth = measurementVars
     ? (getMeasurementVarValue(
         measurementVars,
@@ -183,7 +183,7 @@ export function addComputedDepthColumns(
     );
     const penetrationKey = penetrationCol?.name;
 
-    const resultWithVoid: Array<Row> = result.map((row) => {
+    const resultWithVoid: Array<CptRow> = result.map((row) => {
       const penetration = penetrationKey ? (row[penetrationKey] ?? 0) : 0;
       // Per GEF spec section 3.6.2, data in pre-excavation zone should be treated as void
       const isVoid = penetration < preExcavatedDepth;

@@ -1,9 +1,11 @@
-import { z } from "zod";
 import {
+  buildColumnMap,
+  checkDuplicateQuantities,
+  parseGefRecords,
   processCommonFields,
   type GEFHeadersMap,
   type ProcessedMeasurement,
-  type ProcessedMetadata,
+  type ProcessedDissMetadata,
   type ProcessedText,
 } from "./gef-common.js";
 import {
@@ -14,20 +16,13 @@ import {
   parseGefDissHeaders,
   type ColumnInfo,
   type GefDissHeaders,
-  type Parent,
 } from "./gef-schemas.js";
-import {
-  detectGefExtension,
-  type GefExtension,
-} from "./gef-cpt.js";
 import {
   cptMeasurementVariables,
   cptMeasurementTextVariables,
-  belgianMeasurementTextVariables,
-  belgianMeasurementVariables,
-  dutchMeasurementTextVariables,
-  dutchMeasurementVariables,
+  cptColumnQuantities,
 } from "./gef-cpt-spec.js";
+import type { GefWarning } from "./gef-warnings.js";
 
 export type DissRow = Record<string, number | string | null>;
 
@@ -36,9 +31,8 @@ export interface GefDissData {
   data: Array<DissRow>;
   headers: GefDissHeaders;
   columnInfo: Array<ColumnInfo>;
-  parent: Parent | undefined;
-  warnings: Array<string>;
-  processed: ProcessedMetadata;
+  warnings: Array<GefWarning>;
+  processed: ProcessedDissMetadata;
 }
 
 export function parseGefDissData(
@@ -50,21 +44,6 @@ export function parseGefDissData(
   const columnSeparator = headers.COLUMNSEPARATOR ?? /\s+/;
   const recordSeparator = headers.RECORDSEPARATOR ?? /\r?\n/;
   const columnInfo = headers.COLUMNINFO ?? [];
-  const warnings: Array<string> = [];
-
-  const hasTextColumn = headers.COLUMNTEXT?.[0] !== undefined;
-
-  const records = dataString
-    .split(recordSeparator)
-    .map((r) => r.trim())
-    .filter((r) => r.length > 0);
-
-  const recordLineNumbers: Array<number> = [];
-  let currentLine = 1;
-  for (const record of records) {
-    recordLineNumbers.push(currentLine);
-    currentLine += (record.match(/\n/g) ?? []).length + 1;
-  }
 
   const voidValuesMap = new Map(
     headers.COLUMNVOID?.map(({ columnNumber, voidValue }) => [
@@ -73,75 +52,14 @@ export function parseGefDissData(
     ]) ?? [],
   );
 
-  const data: Array<DissRow> = records.map((record, recordIndex) => {
-    const lineNumber = recordLineNumbers[recordIndex];
-    const rawValues = record
-      .trim()
-      .split(columnSeparator)
-      .filter((val) => val.trim() !== "");
-
-    const row: DissRow = {};
-
-    for (let colIndex = 0; colIndex < columnInfo.length; colIndex++) {
-      const val = rawValues[colIndex];
-      const col = columnInfo[colIndex];
-      const colName = col?.name ?? `column ${colIndex + 1}`;
-
-      if (!val) {
-        row[colName] = null;
-        continue;
-      }
-
-      const trimmed = val.trim();
-      const result = z.coerce.number().safeParse(trimmed);
-
-      if (!result.success) {
-        warnings.push(
-          `Line ${lineNumber}, record ${
-            recordIndex + 1
-          }, ${colName}: invalid number "${trimmed}" - setting to null`,
-        );
-        row[colName] = null;
-        continue;
-      }
-
-      const voidValue = voidValuesMap.get(colIndex + 1);
-      if (result.data === voidValue) {
-        row[colName] = null;
-        continue;
-      }
-
-      row[colName] = result.data;
-    }
-
-    // Handle optional text field
-    if (rawValues.length > columnInfo.length) {
-      const textValue = rawValues[columnInfo.length]?.trim();
-      if (textValue) {
-        if (hasTextColumn) {
-          row.comment = textValue;
-        } else {
-          warnings.push(
-            `Line ${lineNumber}, record ${
-              recordIndex + 1
-            }: found text value "${textValue}" but #COLUMNTEXT header is missing. Text field ignored.`,
-          );
-        }
-      }
-    }
-
-    if (rawValues.length < columnInfo.length) {
-      warnings.push(
-        `Line ${lineNumber}, record ${recordIndex + 1}: found ${
-          rawValues.length
-        } columns but expected ${columnInfo.length}. Missing ${
-          columnInfo.length - rawValues.length
-        } column(s) - values set to null`,
-      );
-    }
-
-    return row;
+  const { rows, warnings } = parseGefRecords(dataString, {
+    columnSeparator,
+    recordSeparator,
+    columnInfo,
+    voidValues: voidValuesMap,
+    hasTextColumn: headers.COLUMNTEXT?.[0] !== undefined,
   });
+  const data = rows as Array<DissRow>;
 
   return {
     data,
@@ -151,53 +69,23 @@ export function parseGefDissData(
   };
 }
 
-function getDissTextVariablesForExtension(extension: GefExtension) {
-  if (extension === "dutch") {
-    return { ...cptMeasurementTextVariables, ...dutchMeasurementTextVariables };
-  }
-  if (extension === "belgian") {
-    return {
-      ...cptMeasurementTextVariables,
-      ...belgianMeasurementTextVariables,
-    };
-  }
-  return cptMeasurementTextVariables;
-}
-
-function getDissVarVariablesForExtension(extension: GefExtension) {
-  if (extension === "dutch") {
-    return { ...cptMeasurementVariables, ...dutchMeasurementVariables };
-  }
-  if (extension === "belgian") {
-    return { ...cptMeasurementVariables, ...belgianMeasurementVariables };
-  }
-  return cptMeasurementVariables;
-}
-
 export function processDissMetadata(
   filename: string,
   headers: GefDissHeaders,
-): ProcessedMetadata {
+  columnInfo: Array<ColumnInfo>,
+): ProcessedDissMetadata {
   const common = processCommonFields(filename, "DISS", headers);
-
-  const extension = detectGefExtension(
-    headers.MEASUREMENTTEXT?.map((mt) => mt.id),
-    headers.MEASUREMENTVAR?.map((mv) => mv.id),
-  );
-
-  const measurementVarMetadata = getDissVarVariablesForExtension(extension);
-  const measurementTextMetadata = getDissTextVariablesForExtension(extension);
 
   const measurements: Record<string, ProcessedMeasurement> = {};
   if (headers.MEASUREMENTVAR) {
     for (const mv of headers.MEASUREMENTVAR) {
       const varInfo =
-        measurementVarMetadata[mv.id as keyof typeof measurementVarMetadata];
+        cptMeasurementVariables[mv.id as keyof typeof cptMeasurementVariables];
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!varInfo || mv.value === undefined) {
         continue;
       }
-      const key = getMeasurementVarKey(mv.id, measurementVarMetadata);
+      const key = getMeasurementVarKey(mv.id, cptMeasurementVariables);
       if (key) {
         measurements[key] = {
           value: mv.value,
@@ -221,17 +109,18 @@ export function processDissMetadata(
   }
 
   const texts: Record<string, ProcessedText> = {};
+  
   if (headers.MEASUREMENTTEXT) {
     for (const mt of headers.MEASUREMENTTEXT) {
       const textInfo =
-        measurementTextMetadata[mt.id as keyof typeof measurementTextMetadata];
+        cptMeasurementTextVariables[mt.id as keyof typeof cptMeasurementTextVariables];
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (!textInfo) {
         continue;
       }
       const measurementTextKey = getMeasurementTextKey(
         mt.id,
-        measurementTextMetadata,
+        cptMeasurementTextVariables,
       );
       if (measurementTextKey) {
         texts[measurementTextKey] = {
@@ -256,6 +145,9 @@ export function processDissMetadata(
 
   return {
     ...common,
+    fileType: "DISS",
+    columns: buildColumnMap(columnInfo, cptColumnQuantities),
+    parent: headers.PARENT,
     measurements,
     texts,
   };
@@ -264,8 +156,8 @@ export function processDissMetadata(
 export function generateDissWarnings(
   filename: string,
   headers: GefDissHeaders,
-): Array<string> {
-  const warnings: Array<string> = [];
+): Array<GefWarning> {
+  const warnings: Array<GefWarning> = [];
 
   if (!headers.COLUMNINFO) {
     return warnings;
@@ -273,25 +165,9 @@ export function generateDissWarnings(
 
   const columnInfo = headers.COLUMNINFO;
 
-  // Check for duplicate quantity numbers
-  const quantityMap = new Map<number, Array<number>>();
-  for (const col of columnInfo) {
-    if (col.quantityNumber > 0) {
-      const existing = quantityMap.get(col.quantityNumber) ?? [];
-      existing.push(col.colNum);
-      quantityMap.set(col.quantityNumber, existing);
-    }
-  }
-
-  for (const [quantityNum, colNums] of quantityMap) {
-    if (colNums.length > 1) {
-      warnings.push(
-        `File '${filename}' has duplicate quantity number ${quantityNum} assigned to columns ${colNums.join(
-          ", ",
-        )}. Each quantity should appear only once.`,
-      );
-    }
-  }
+  warnings.push(
+    ...checkDuplicateQuantities(filename, columnInfo, cptColumnQuantities),
+  );
 
   return warnings;
 }

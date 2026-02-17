@@ -43,19 +43,23 @@ fileInput.addEventListener("change", async (e) => {
   const file = e.target.files[0];
   const gefData = await parseGefFile(file);
 
-  if (gefData.type === "cpt") {
-    // CPT data with measurements
-    console.log("Cone resistance:", gefData.data.qc);
-    console.log("Depth:", gefData.data.depth);
-    console.log("Metadata:", gefData.metadata);
-  } else if (gefData.type === "bore") {
-    // Borehole data with soil layers
-    gefData.data.forEach((layer) => {
-      console.log(
-        `${layer.soilCode} from ${layer.depthTop}m to ${layer.depthBottom}m`,
-      );
-    });
-    console.log("Specimens:", gefData.specimens);
+  switch (gefData.type) {
+    case "CPT": {
+      console.log("Cone resistance:", gefData.data.qc);
+      console.log("Depth:", gefData.data.depth);
+      console.log("Metadata:", gefData.metadata);
+    }
+    case "BORE": {
+      gefData.data.forEach((layer) => {
+        console.log(
+          `${layer.soilCode} from ${layer.depthTop}m to ${layer.depthBottom}m`,
+        );
+      });
+      console.log("Specimens:", gefData.specimens);
+    }
+    case "DISS": {
+      console.log("Dissipation data:", gefData.data);
+    }
   }
 });
 ```
@@ -68,36 +72,6 @@ import { readFile } from "fs/promises";
 const buffer = await readFile("path/to/file.gef");
 const file = new File([buffer], "file.gef");
 const gefData = await parseGefFile(file);
-```
-
-### Coordinate Conversion
-
-Convert GEF coordinates (typically Dutch RD or Belgian Lambert) to WGS84:
-
-```typescript
-import { convertToWGS84 } from "@bedrock-engineer/gef-parser";
-
-const result = convertToWGS84({
-  x: 155000, // RD x-coordinate
-  y: 463000, // RD y-coordinate
-  epsg: 28992, // Dutch RD coordinate system
-});
-
-if (result.success) {
-  console.log(`Lat: ${result.lat}, Lon: ${result.lon}`);
-}
-```
-
-### Depth Correction
-
-Apply depth corrections for inclinometer data:
-
-```typescript
-import { addComputedDepthColumns } from "@bedrock-engineer/gef-parser";
-
-// Adds corrected depth columns based on inclinometer measurements
-const correctedData = addComputedDepthColumns(gefData.data);
-```
 
 ## API
 
@@ -105,9 +79,10 @@ const correctedData = addComputedDepthColumns(gefData.data);
 
 - `parseGefFile(file: File): Promise<GefData>` - Parse any GEF file
 - `parseGefCptData()` - Parse CPT-specific data
-- `parseGefBoreData()` - Parse borehole-specific data
 - `processCptMetadata()` - Extract CPT metadata
+- `parseGefBoreData()` - Parse borehole-specific data
 - `processBoreMetadata()` - Extract borehole metadata
+- `parseGefDissData()` - Parse DISS-specifc data
 
 ### Types
 
@@ -120,6 +95,7 @@ import type {
   GefBoreData,
   GefHeaders,
   ColumnInfo,
+  GefDissData,
 } from "@bedrock-engineer/gef-parser";
 ```
 

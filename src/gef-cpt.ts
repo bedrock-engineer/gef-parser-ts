@@ -1,32 +1,40 @@
-import { z } from "zod";
-import { addComputedDepthColumns, type Row } from "./depth-correction.js";
+import { addComputedDepthColumns, type CptRow } from "./depth-correction.js";
 import {
+  buildColumnMap,
+  checkDuplicateQuantities,
+  parseGefRecords,
   processCommonFields,
   ProcessedMeasurement,
-  ProcessedMetadata,
   ProcessedText,
   type GEFHeadersMap,
+  type ProcessedCptMetadata,
 } from "./gef-common.js";
+import {
+  cptColumnQuantities,
+  cptMeasurementTextVariables,
+  cptMeasurementVariables,
+  broMeasurementTextVariables,
+  broMeasurementVariables,
+  belgianMeasurementTextVariables,
+  belgianMeasurementVariables,
+  klasse1MeasurementTextVariables,
+  klasse1MeasurementVariables,
+  votbMeasurementTextVariables,
+  votbMeasurementVariables,
+} from "./gef-cpt-spec.js";
 import {
   getMeasurementTextKey,
   getMeasurementVarKey,
 } from "./gef-measurement-mappings.js";
 import {
   parseGefCptHeaders,
+  SpecimenVar,
   type ColumnInfo,
   type GefCptHeaders,
 } from "./gef-schemas.js";
-import {
-  cptMeasurementVariables,
-  cptMeasurementTextVariables,
-  cptColumnQuantities,
-  belgianMeasurementTextVariables,
-  belgianMeasurementVariables,
-  dutchMeasurementTextVariables,
-  dutchMeasurementVariables,
-} from "./gef-cpt-spec.js";
+import type { GefWarning } from "./gef-warnings.js";
 
-export type GefExtension = "standard" | "dutch" | "belgian";
+export type GefExtension = "standard" | "bro" | "belgian" | "klasse1" | "votb";
 
 // Pre-excavation layer for CPT files
 // Describes soil that was removed before cone penetration testing
@@ -39,18 +47,18 @@ export interface PreExcavationLayer {
 
 export interface GefCptData {
   fileType: "CPT";
-  data: Array<Row>;
+  data: Array<CptRow>;
   headers: GefCptHeaders;
   columnInfo: Array<ColumnInfo>;
-  preExcavationLayers: Array<PreExcavationLayer>;
-  warnings: Array<string>;
-  processed: ProcessedMetadata;
+  warnings: Array<GefWarning>;
+  processed: ProcessedCptMetadata;
 }
 
 export function processCptMetadata(
   filename: string,
   headers: GefCptHeaders,
-): ProcessedMetadata {
+  columnInfo: Array<ColumnInfo>,
+): ProcessedCptMetadata {
   const common = processCommonFields(filename, "CPT", headers);
 
   // Detect if this is a Belgian (DOV) or Dutch (BRO/VOTB) extension
@@ -150,6 +158,11 @@ export function processCptMetadata(
 
   return {
     ...common,
+    fileType: "CPT",
+    extension,
+    columns: buildColumnMap(columnInfo, cptColumnQuantities),
+    preExcavationLayers: parsePreExcavationLayers(headers),
+    children: headers.CHILD ?? [],
     measurements,
     texts,
   };
@@ -169,7 +182,9 @@ export function parsePreExcavationLayers(
 
   // Filter out layers with missing values and sort by ID to ensure correct order
   const sorted = [...specimenVars]
-    .filter((sv) => sv.value !== undefined)
+    .filter(
+      (sv): sv is SpecimenVar & { value: number } => sv.value !== undefined,
+    )
     .sort((a, b) => a.id - b.id);
 
   const layers: Array<PreExcavationLayer> = [];
@@ -177,7 +192,7 @@ export function parsePreExcavationLayers(
 
   for (const layer of sorted) {
     // Type assertion safe here because we filtered out undefined values above
-    const depthBottom = layer.value!;
+    const depthBottom = layer.value;
     layers.push({
       depthTop: previousDepth,
       depthBottom: depthBottom,
@@ -220,7 +235,7 @@ export function detectGefExtension(
     (id) => (id >= 101 && id <= 130) || id >= 1100,
   );
   if (hasDutchTextIds || hasDutchVarIds) {
-    return "dutch";
+    return "bro";
   }
 
   // Belgian DOV fields: MEASUREMENTTEXT (135-144), MEASUREMENTVAR (130-354)
@@ -246,8 +261,17 @@ const CPT_QUANTITY = {
  * Get CPT measurement text variables for a given extension
  */
 function getCptMeasurementTextVariablesForExtension(extension: GefExtension) {
-  if (extension === "dutch") {
-    return { ...cptMeasurementTextVariables, ...dutchMeasurementTextVariables };
+  if (extension === "bro") {
+    return { ...cptMeasurementTextVariables, ...broMeasurementTextVariables };
+  }
+  if (extension === "klasse1") {
+    return {
+      ...cptMeasurementTextVariables,
+      ...klasse1MeasurementTextVariables,
+    };
+  }
+  if (extension === "votb") {
+    return { ...cptMeasurementTextVariables, ...votbMeasurementTextVariables };
   }
   if (extension === "belgian") {
     return {
@@ -263,8 +287,14 @@ function getCptMeasurementTextVariablesForExtension(extension: GefExtension) {
  * Get CPT measurement variables for a given extension
  */
 function getCptMeasurementVariablesForExtension(extension: GefExtension) {
-  if (extension === "dutch") {
-    return { ...cptMeasurementVariables, ...dutchMeasurementVariables };
+  if (extension === "bro") {
+    return { ...cptMeasurementVariables, ...broMeasurementVariables };
+  }
+  if (extension === "klasse1") {
+    return { ...cptMeasurementVariables, ...klasse1MeasurementVariables };
+  }
+  if (extension === "votb") {
+    return { ...cptMeasurementVariables, ...votbMeasurementVariables };
   }
   if (extension === "belgian") {
     return { ...cptMeasurementVariables, ...belgianMeasurementVariables };
@@ -329,25 +359,9 @@ export function parseGefCptData(dataString: string, headersMap: GEFHeadersMap) {
   // Handle both \r\n (CR/LF) and \n (LF) for cross-platform compatibility
   const recordSeparator = headers.RECORDSEPARATOR ?? /\r?\n/;
   const columnInfo = headers.COLUMNINFO ?? [];
-  const warnings: Array<string> = [];
 
   // Check if text column is allowed in data block (per GEF spec)
-  const columnText = headers.COLUMNTEXT?.[0]; // Typically only one text column
-  const hasTextColumn = columnText !== undefined;
-
-  // Split by record separator first (like BORE parser does)
-  const records = dataString
-    .split(recordSeparator)
-    .map((r) => r.trim())
-    .filter((r) => r.length > 0);
-
-  // Track line numbers for better error messages
-  const recordLineNumbers: Array<number> = [];
-  let currentLine = 1;
-  for (const record of records) {
-    recordLineNumbers.push(currentLine);
-    currentLine += (record.match(/\n/g) ?? []).length + 1;
-  }
+  const hasTextColumn = headers.COLUMNTEXT?.[0] !== undefined;
 
   // Create void values map from parsed COLUMNVOID
   const voidValuesMap = new Map(
@@ -384,98 +398,13 @@ export function parseGefCptData(dataString: string, headersMap: GEFHeadersMap) {
     }
   }
 
-  const normalizedRows = records.map((record, recordIndex) => {
-    const lineNumber = recordLineNumbers[recordIndex];
-    const rawValues = record
-      .trim()
-      .split(columnSeparator)
-      .filter((val) => val.trim() !== "");
-
-    // Build row object directly with column names
-    const row: Record<string, number | string | null | undefined> = {};
-
-    // Parse numeric columns
-    for (let colIndex = 0; colIndex < columnInfo.length; colIndex++) {
-      const val = rawValues[colIndex];
-      const col = columnInfo[colIndex];
-      const colName = col?.name ?? `column ${colIndex + 1}`;
-
-      if (!val) {
-        row[colName] = null;
-        continue;
-      }
-
-      const trimmed = val.trim();
-
-      const result = z.coerce.number().safeParse(trimmed);
-
-      if (!result.success) {
-        // Collect warning for invalid value
-        warnings.push(
-          `Line ${lineNumber}, record ${
-            recordIndex + 1
-          }, ${colName}: invalid number "${trimmed}" - setting to null`,
-        );
-        row[colName] = null;
-        continue;
-      }
-
-      // Check if this is a void value
-      const voidValue = voidValuesMap.get(colIndex + 1);
-      if (result.data === voidValue) {
-        row[colName] = null;
-        continue;
-      }
-
-      // Normalize depth values to absolute (some GEF files use negative depths)
-      if (col && depthColumnNumbers.has(col.colNum)) {
-        row[colName] = Math.abs(result.data);
-      } else {
-        row[colName] = result.data;
-      }
-    }
-
-    // Check for optional text field (spec: "extra text in the data block if #COLUMNTEXT is used")
-    if (rawValues.length > columnInfo.length) {
-      const textValue = rawValues[columnInfo.length]?.trim();
-      if (textValue) {
-        if (hasTextColumn) {
-          row.comment = textValue;
-        } else {
-          warnings.push(
-            `Line ${lineNumber}, record ${
-              recordIndex + 1
-            }: found text value "${textValue}" but #COLUMNTEXT header is missing. Text field ignored.`,
-          );
-        }
-      }
-    }
-
-    // Warn if there are fewer columns than expected
-    if (rawValues.length < columnInfo.length) {
-      warnings.push(
-        `Line ${lineNumber}, record ${recordIndex + 1}: found ${
-          rawValues.length
-        } columns but expected ${columnInfo.length}. Missing ${
-          columnInfo.length - rawValues.length
-        } column(s) - values set to null`,
-      );
-    }
-
-    // Warn if there are more columns than expected (beyond the optional comment)
-    if (rawValues.length > columnInfo.length + 1) {
-      warnings.push(
-        `Line ${lineNumber}, record ${recordIndex + 1}: found ${
-          rawValues.length
-        } columns but expected ${
-          columnInfo.length
-        } (+ optional comment). Extra columns: ${rawValues
-          .slice(columnInfo.length + 1)
-          .join(", ")}`,
-      );
-    }
-
-    return row;
+  const { rows: normalizedRows, warnings } = parseGefRecords(dataString, {
+    columnSeparator,
+    recordSeparator,
+    columnInfo,
+    voidValues: voidValuesMap,
+    hasTextColumn,
+    absoluteValueColumns: depthColumnNumbers,
   });
 
   // Add computed depth columns (trueDepth, elevation)
@@ -497,9 +426,9 @@ export function parseGefCptData(dataString: string, headersMap: GEFHeadersMap) {
 export function generateCptWarnings(
   filename: string,
   headers: GefCptHeaders,
-  data?: Array<Row>,
-): Array<string> {
-  const warnings: Array<string> = [];
+  data?: Array<CptRow>,
+): Array<GefWarning> {
+  const warnings: Array<GefWarning> = [];
 
   if (!headers.COLUMNINFO) {
     return warnings;
@@ -507,27 +436,9 @@ export function generateCptWarnings(
 
   const columnInfo = headers.COLUMNINFO;
 
-  // Check for duplicate quantity numbers
-  const quantityMap = new Map<number, Array<number>>();
-  for (const col of columnInfo) {
-    if (col.quantityNumber > 0) {
-      const existing = quantityMap.get(col.quantityNumber) ?? [];
-      existing.push(col.colNum);
-      quantityMap.set(col.quantityNumber, existing);
-    }
-  }
-
-  for (const [quantityNum, colNums] of quantityMap) {
-    if (colNums.length > 1) {
-      const quantityInfo = cptColumnQuantities[quantityNum];
-      const quantityName = quantityInfo?.name ?? `Quantity ${quantityNum}`;
-      warnings.push(
-        `File '${filename}' has duplicate quantity number ${quantityNum} (${quantityName}) assigned to columns ${colNums.join(
-          ", ",
-        )}. Per GEF-CPT specification, each quantity should appear only once. This may cause ambiguous data interpretation and incorrect chart rendering.`,
-      );
-    }
-  }
+  warnings.push(
+    ...checkDuplicateQuantities(filename, columnInfo, cptColumnQuantities),
+  );
 
   // Check for required parameters (per GEF-CPT spec)
   const hasLength = columnInfo.some(
@@ -538,31 +449,37 @@ export function generateCptWarnings(
   );
 
   if (!hasLength) {
-    warnings.push(
-      `File '${filename}' missing required COLUMNINFO for Penetration length (quantity 1). Per GEF-CPT specification, penetration length is mandatory. Charts and depth calculations may not display correctly without this data.`,
-    );
+    warnings.push({
+      type: "missingRequiredColumn",
+      filename,
+      quantityNumber: CPT_QUANTITY.LENGTH,
+      quantityName: "Penetration length",
+    });
   }
   if (!hasConeResistance) {
-    warnings.push(
-      `File '${filename}' missing required COLUMNINFO for Cone resistance (quantity 2). Per GEF-CPT specification, cone resistance (qc) is mandatory for CPT tests.`,
-    );
+    warnings.push({
+      type: "missingRequiredColumn",
+      filename,
+      quantityNumber: CPT_QUANTITY.CONE_RESISTANCE,
+      quantityName: "Cone resistance",
+    });
   }
 
-  warnings.concat(
-    checkColumnMinMac(headers.COLUMNMINMAX, data, columnInfo, filename),
+  warnings.push(
+    ...checkColumnMinMax(headers.COLUMNMINMAX, data, columnInfo, filename),
   );
 
   return warnings;
 }
 
 // Validate COLUMNMINMAX bounds if present
-function checkColumnMinMac(
+function checkColumnMinMax(
   columnMinMax: GefCptHeaders["COLUMNMINMAX"],
-  data: Array<Row> | undefined,
+  data: Array<CptRow> | undefined,
   columnInfo: Array<ColumnInfo>,
   filename: string,
-) {
-  const warnings: Array<string> = [];
+): Array<GefWarning> {
+  const warnings: Array<GefWarning> = [];
   if (columnMinMax && data && data.length > 0) {
     for (const { columnNumber, min, max } of columnMinMax) {
       const colInfo = columnInfo.find((c) => c.colNum === columnNumber);
@@ -582,13 +499,16 @@ function checkColumnMinMac(
       const actualMax = Math.max(...values);
 
       if (actualMin < min || actualMax > max) {
-        warnings.push(
-          `File '${filename}' column ${columnNumber} (${
-            colInfo.name
-          }): actual data range [${actualMin.toFixed(3)}, ${actualMax.toFixed(
-            3,
-          )}] exceeds declared COLUMNMINMAX range [${min}, ${max}]. This indicates the COLUMNMINMAX header does not match the actual data, which may suggest data quality issues or incorrect metadata.`,
-        );
+        warnings.push({
+          type: "columnMinMaxExceeded",
+          filename,
+          columnNumber,
+          columnName: colInfo.name,
+          actualMin,
+          actualMax,
+          declaredMin: min,
+          declaredMax: max,
+        });
       }
     }
   }

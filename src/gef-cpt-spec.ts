@@ -1117,17 +1117,20 @@ export const cptMeasurementTextVariables = {
     example: "X-axis aligned with magnetic north",
   },
 };
+
 export type CptMeasurementVariable =
   (typeof cptMeasurementVariables)[keyof typeof cptMeasurementVariables];
+
 export type CptMeasurementTextVariable =
   (typeof cptMeasurementTextVariables)[keyof typeof cptMeasurementTextVariables];
+
 // =============================================================================
 // DUTCH EXTENSIONS (BRO + VOTB)
 // BRO: Basis Registratie Ondergrond - regulatory submission fields
 // VOTB: Vereniging Ondernemers Technisch Bodemonderzoek - industry fields
 // =============================================================================
 
-export const dutchMeasurementTextVariables = {
+export const broMeasurementTextVariables = {
   101: {
     description: "Data holder",
     descriptionNl: "Bronhouder",
@@ -1323,7 +1326,9 @@ export const dutchMeasurementTextVariables = {
     category: "bro_registration",
     example: "nee",
   },
+};
 
+export const votbMeasurementTextVariables = {
   1100: {
     description: "Filter material type for pore pressure filter",
     descriptionNl: "Type filtermateriaal voor waterspanningsfilter",
@@ -1402,12 +1407,11 @@ export const dutchMeasurementTextVariables = {
   },
 };
 
-export const dutchMeasurementVariables = {
+export const broMeasurementVariables = {
   101: {
     unit: "m",
     description: "Penetration length",
     descriptionNl: "Sondeertrajectlengte",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1415,7 +1419,6 @@ export const dutchMeasurementVariables = {
     unit: "m",
     description: "Depth",
     descriptionNl: "Diepte",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1423,7 +1426,6 @@ export const dutchMeasurementVariables = {
     unit: "s",
     description: "Elapsed time",
     descriptionNl: "Verlopen tijd",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1431,7 +1433,6 @@ export const dutchMeasurementVariables = {
     unit: "MPa",
     description: "Cone resistance",
     descriptionNl: "Conusweerstand",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1439,7 +1440,6 @@ export const dutchMeasurementVariables = {
     unit: "MPa",
     description: "Corrected cone resistance",
     descriptionNl: "Gecorrigeerde conusweerstand",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1447,7 +1447,6 @@ export const dutchMeasurementVariables = {
     unit: "MPa",
     description: "Net cone resistance",
     descriptionNl: "Netto conusweerstand",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1455,7 +1454,6 @@ export const dutchMeasurementVariables = {
     unit: "nT",
     description: "Magnetic field strength x",
     descriptionNl: "Magnetische veldsterkte x",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1463,7 +1461,6 @@ export const dutchMeasurementVariables = {
     unit: "nT",
     description: "Magnetic field strength y",
     descriptionNl: "Magnetische veldsterkte y",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1471,7 +1468,6 @@ export const dutchMeasurementVariables = {
     unit: "nT",
     description: "Magnetic field strength z",
     descriptionNl: "Magnetische veldsterkte z",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1479,7 +1475,6 @@ export const dutchMeasurementVariables = {
     unit: "nT",
     description: "Total magnetic field strength",
     descriptionNl: "Totale magnetische veldsterkte",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1487,7 +1482,6 @@ export const dutchMeasurementVariables = {
     unit: "S/m",
     description: "Electrical conductivity",
     descriptionNl: "Electrische geleidbaarheid",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1495,7 +1489,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Inclination east-west",
     descriptionNl: "Helling oost-west",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1503,7 +1496,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Inclination north-south",
     descriptionNl: "Helling noord-zuid",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1511,7 +1503,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Inclination x",
     descriptionNl: "Helling x",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1519,7 +1510,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Inclination y",
     descriptionNl: "Helling y",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1527,7 +1517,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Resultant inclination",
     descriptionNl: "Hellingresultante",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1535,7 +1524,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Magnetic inclination",
     descriptionNl: "Magnetische inclinatie",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1543,7 +1531,6 @@ export const dutchMeasurementVariables = {
     unit: "degrees",
     description: "Magnetic declination",
     descriptionNl: "Magnetische declinatie",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1551,7 +1538,6 @@ export const dutchMeasurementVariables = {
     unit: "MPa",
     description: "Local friction",
     descriptionNl: "Plaatselijke wrijving",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1559,7 +1545,6 @@ export const dutchMeasurementVariables = {
     unit: "-",
     description: "Pore ratio",
     descriptionNl: "Poriënratio",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1567,7 +1552,6 @@ export const dutchMeasurementVariables = {
     unit: "°C",
     description: "Temperature",
     descriptionNl: "Temperatuur",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1575,7 +1559,6 @@ export const dutchMeasurementVariables = {
     unit: "MPa",
     description: "Pore pressure u1",
     descriptionNl: "Waterspanning u1",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1583,7 +1566,6 @@ export const dutchMeasurementVariables = {
     unit: "MPa",
     description: "Pore pressure u2",
     descriptionNl: "Waterspanning u2",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1591,7 +1573,6 @@ export const dutchMeasurementVariables = {
     unit: "%",
     description: "Friction ratio",
     descriptionNl: "Wrijvingsgetal",
-    category: "bro_data",
     dataType: "float",
   },
 
@@ -1602,7 +1583,220 @@ export const dutchMeasurementVariables = {
     category: "bro_equipment",
     dataType: "float",
   },
+};
 
+export const klasse1MeasurementTextVariables = {
+  1000: { descriptionNl: "Type test", descriptionEn: "test type" },
+  1001: {
+    descriptionNl: "Bijzonderheden of afwijkingen van iso 22476",
+    descriptionEn: "particulars or deviations from this part of iso 22476",
+  },
+  1002: { descriptionNl: "Sondeerbaas", descriptionEn: "equipment operator" },
+  1003: {
+    descriptionNl: "Type bodemmateriaal aangetroffen (indien mogelijk)",
+    descriptionEn: "type of materials encountered (if possible)",
+  },
+  1004: {
+    descriptionNl:
+      "Diepte penetratie en mogelijke oorzaken van onderbrekingen (b.v. dissipatietesten)",
+    descriptionEn:
+      "depth of penetration and possible causes of any interruptions (like dissipation tests)",
+  },
+  1005: {
+    descriptionNl: "Methode van afdichten (indien van toepassing)",
+    descriptionEn: "method of backfilling the hole (if applicable)",
+  },
+  1006: {
+    descriptionNl: "Aanwezigheid van stenen",
+    descriptionEn: "presence of stones",
+  },
+  1007: {
+    descriptionNl: "Geluid van de sondeerstangen",
+    descriptionEn: "noise from the pushing rods",
+  },
+  1008: { descriptionNl: "Incidenten", descriptionEn: "incidents" },
+  1009: { descriptionNl: "Verbogen stangen", descriptionEn: "buckled rods" },
+  1010: {
+    descriptionNl: "Afwijkende slijtage",
+    descriptionEn: "abnormal wear",
+  },
+  1011: {
+    descriptionNl:
+      "Significante veranderingen in nul metingen of referentie metingen",
+    descriptionEn: "significant changes in zero or reference readings",
+  },
+  1012: {
+    descriptionNl:
+      "Afwijkingen in opstelling sondeerunit (b.v. jack-up platform)",
+    descriptionEn:
+      "specific arrangements that deviate from common set up of thrust machine (like a jack-up platform) ",
+  },
+  1013: {
+    descriptionNl: "Leverancier conus",
+    descriptionEn: "manufacturer of cone penetrometer",
+  },
+  1014: {
+    descriptionNl: "Datum laatste calibratie sensoren",
+    descriptionEn: "date of last calibration of sensors  ",
+  },
+  1015: {
+    descriptionNl:
+      "Type vloeistof in meetkamer voor meting waterspanning (bij waterspanningssonderingen)",
+    descriptionEn:
+      "saturation fluid used in pore pressure system (if piezocone) ",
+  },
+  1016: {
+    descriptionNl: "Rechtheid van sondeerstangen",
+    descriptionEn: "linearity of the pushing rods",
+  },
+  1017: {
+    descriptionNl: "Controle helling voor test",
+    descriptionEn: "inclination control before test",
+  },
+  1018: {
+    descriptionNl: "Controle helling na test",
+    descriptionEn: "inclination control after test",
+  },
+  1019: {
+    descriptionNl: "Vertikaalstand drukunit voor test",
+    descriptionEn: "verticality of thrust machine before test",
+  },
+  1020: {
+    descriptionNl: "Vertikaalstand drukunit na test",
+    descriptionEn: "verticality of thrust machine after test",
+  },
+};
+
+export const klasse1MeasurementVariables = {
+  1000: {
+    unit: "mm",
+    dataType: "float",
+    description: "Cone tip diameter after test",
+    descriptionNl: "Conuspuntdiameter na test",
+  },
+  1001: {
+    unit: "mm",
+    dataType: "float",
+    description: "Friction sleeve diameter before test (low)",
+    descriptionNl: "Mantel diameter voor test (onder)",
+  },
+  1002: {
+    unit: "mm",
+    dataType: "float",
+    description: "Friction sleeve diameter after test (low)",
+    descriptionNl: "Mantel diameter na test (onder)",
+  },
+  1003: {
+    unit: "mm",
+    dataType: "float",
+    description: "Friction sleeve diameter before test (mid)",
+    descriptionNl: "Mantel diameter voor test (midden)",
+  },
+  1004: {
+    unit: "mm",
+    dataType: "float",
+    description: "Friction sleeve diameter after test (mid)",
+    descriptionNl: "Mantel diameter na test (midden)",
+  },
+  1005: {
+    unit: "mm",
+    dataType: "float",
+    description: "Friction sleeve diameter before test (top)",
+    descriptionNl: "Mantel diameter voor test (boven)",
+  },
+  1006: {
+    unit: "mm",
+    dataType: "float",
+    description: "Friction sleeve diameter after test (top)",
+    descriptionNl: "Mantel diameter na test (boven)",
+  },
+  1007: {
+    unit: "mm",
+    dataType: "float",
+    description: "Height of conical part of cone tip before test",
+    descriptionNl: "Hoogte conisch gedeelte conuspunt voor test",
+  },
+  1008: {
+    unit: "mm",
+    dataType: "float",
+    description: "Height of conical part of cone tip after test",
+    descriptionNl: "Hoogte conisch gedeelte conuspunt na test",
+  },
+  1009: {
+    unit: "mm",
+    dataType: "float",
+    description: "Length of cone tip extension before test",
+    descriptionNl: "Hoogte conuspunt extentie voor test",
+  },
+  1010: {
+    unit: "mm",
+    dataType: "float",
+    description: "Length of cone tip extension after test",
+    descriptionNl: "Hoogte conuspunt extentie na test",
+  },
+  1011: {
+    unit: "mm",
+    dataType: "float",
+    description: "Length of the friction sleeve before test",
+    descriptionNl: "Lengte kleefmantel voor test",
+  },
+  1012: {
+    unit: "mm",
+    dataType: "float",
+    description: "Length of the friction sleeve after test",
+    descriptionNl: "Lengte kleefmantel na test",
+  },
+  1013: {
+    unit: "MPa",
+    dataType: "float",
+    description: "Measuring ranges of cone tip",
+    descriptionNl: "Meetbereik puntweerstand",
+  },
+  1014: {
+    unit: "MPa",
+    dataType: "float",
+    description: "Measuring ranges of friction sleeve",
+    descriptionNl: "Meetbereik mantelwrijving",
+  },
+  1015: {
+    unit: "MPa",
+    dataType: "float",
+    description: "Measuring ranges of pore pressure",
+    descriptionNl: "Meetbereik waterspanning",
+  },
+  1016: {
+    unit: "-",
+    dataType: "float",
+    description: "Net area ratio nominal",
+    descriptionNl: "Netto oppervlakteverhouding nominaal",
+  },
+  1017: {
+    unit: "-",
+    dataType: "float",
+    description: "Measured net area ratio",
+    descriptionNl: "Netto oppervlakteverhouding gemeten",
+  },
+  1018: {
+    unit: "m",
+    dataType: "float",
+    description: "Depth of casing applied",
+    descriptionNl: "Diepte tot waarop steuncasing is toegepast",
+  },
+  1019: {
+    unit: "m",
+    dataType: "float",
+    description: "Back filling from",
+    descriptionNl: "Afdichting sondeergat van",
+  },
+  1020: {
+    unit: "m",
+    dataType: "float",
+    description: "Back filling to",
+    descriptionNl: "Afdichting sondeergat tot",
+  },
+};
+
+export const votbMeasurementVariables = {
   1100: {
     unit: "µm",
     description: "Pore diameter of filter material",

@@ -1,7 +1,7 @@
 import { processCommonFields, type GEFHeadersMap } from "./gef-common.js";
 import type {
   ProcessedMeasurement,
-  ProcessedMetadata,
+  ProcessedBoreMetadata,
   ProcessedText,
 } from "./gef-common.js";
 import {
@@ -16,6 +16,7 @@ import {
 } from "./gef-schemas.js";
 import { BORE_LAYER_QUANTITY } from "./gef-bore-codes.js";
 import { z } from "zod";
+import type { GefWarning } from "./gef-warnings.js";
 import {
   boreMeasurementTextVariables,
   boreMeasurementVariables,
@@ -24,10 +25,9 @@ import {
 export interface GefBoreData {
   fileType: "BORE";
   layers: Array<BoreLayer>;
-  specimens: Array<BoreSpecimen>;
   headers: GefBoreHeaders;
-  warnings: Array<string>;
-  processed: ProcessedMetadata;
+  warnings: Array<GefWarning>;
+  processed: ProcessedBoreMetadata;
 }
 
 export interface StandardizedCode {
@@ -76,11 +76,13 @@ function decodeBoreMeasurementText(id: number, text: string): string {
 export function processBoreMetadata(
   filename: string,
   headers: GefBoreHeaders,
-): ProcessedMetadata {
+): ProcessedBoreMetadata {
   const common = processCommonFields(filename, "BORE", headers);
 
   return {
     ...common,
+    fileType: "BORE",
+    specimens: parseGefBoreSpecimens(headers),
     measurements: processBoreMeasurementVar(headers.MEASUREMENTVAR),
     texts: processBoreMeasurementText(headers.MEASUREMENTTEXT),
   };
@@ -349,12 +351,13 @@ const specimenVarOffsets = {
   diameterMonstersteekapparaat: 7,
 } as const;
 
-// Helper to calculate SPECIMENVAR ID for a given specimen number k
+const propertiesPerSpecimen = 7;
+
 function getSpecimenVarId(
   k: number,
   property: keyof typeof specimenVarOffsets,
 ): number {
-  return specimenVarOffsets[property] + 7 * k;
+  return specimenVarOffsets[property] + propertiesPerSpecimen * k;
 }
 
 // N + Offsets for SPECIMENTEXT IDs
@@ -368,12 +371,13 @@ const specimentTextOffsets = {
   monstermethode: 10,
 } as const;
 
-// Helper to calculate SPECIMENTEXT ID for a given specimen number k
+const nrOfSpecimenTextProperties = 7;
+
 function getSpecimenTextId(
   k: number,
   property: keyof typeof specimentTextOffsets,
 ): number {
-  return specimentTextOffsets[property] + 7 * k;
+  return specimentTextOffsets[property] + nrOfSpecimenTextProperties * k;
 }
 
 export function parseGefBoreData(
@@ -382,12 +386,12 @@ export function parseGefBoreData(
 ): {
   layers: Array<BoreLayer>;
   headers: GefBoreHeaders;
-  warnings: Array<string>;
+  warnings: Array<GefWarning>;
 } {
   const headers = parseGefBoreHeaders(headersMap);
   const columnSeparator = headers.COLUMNSEPARATOR ?? ";";
   const columnInfo = headers.COLUMNINFO ?? [];
-  const warnings: Array<string> = [];
+  const warnings: Array<GefWarning> = [];
 
   // Per GEF spec: default record separator is CR/LF
   // Handle both \r\n (CR/LF) and \n (LF) for cross-platform compatibility
@@ -414,7 +418,7 @@ export function parseGefBoreData(
   );
 
   const layers: Array<BoreLayer> = records.map((record, recordIndex) => {
-    const lineNumber = recordLineNumbers[recordIndex];
+    const lineNumber = recordLineNumbers[recordIndex] ?? 0;
     const parts = record
       .split(columnSeparator)
       .map((p) => p.trim())
@@ -428,11 +432,13 @@ export function parseGefBoreData(
       if (!result.success) {
         // Collect warning for invalid value
         const colName = columnInfo[index]?.name ?? `column ${index + 1}`;
-        warnings.push(
-          `Line ${lineNumber}, record ${
-            recordIndex + 1
-          }, ${colName}: invalid number "${val}" - setting to null`,
-        );
+        warnings.push({
+          type: "invalidNumber",
+          line: lineNumber,
+          record: recordIndex + 1,
+          column: colName,
+          rawValue: val,
+        });
         return null;
       }
 
@@ -508,25 +514,29 @@ export function parseGefBoreData(
   });
 
   const validLayers = layers.filter((layer, index) => {
-    const lineNumber = recordLineNumbers[index];
+    const lineNumber = recordLineNumbers[index] ?? 0;
 
     // Check for NaN in depth values
     if (Number.isNaN(layer.depthTop) || Number.isNaN(layer.depthBottom)) {
-      warnings.push(
-        `Line ${lineNumber}, record ${index + 1}: invalid depth values (top: ${
-          layer.depthTop
-        }, bottom: ${layer.depthBottom}) - skipping layer`,
-      );
+      warnings.push({
+        type: "invalidDepth",
+        line: lineNumber,
+        record: index + 1,
+        depthTop: layer.depthTop,
+        depthBottom: layer.depthBottom,
+      });
       return false;
     }
 
     // Check for inverted depth values
     if (layer.depthBottom < layer.depthTop) {
-      warnings.push(
-        `Line ${lineNumber}, record ${index + 1}: depth bottom (${
-          layer.depthBottom
-        }m) is less than depth top (${layer.depthTop}m) - skipping layer`,
-      );
+      warnings.push({
+        type: "invertedDepth",
+        line: lineNumber,
+        record: index + 1,
+        depthTop: layer.depthTop,
+        depthBottom: layer.depthBottom,
+      });
       return false;
     }
 

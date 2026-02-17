@@ -694,6 +694,45 @@ const gefDissHeadersSchema = gefBaseHeadersSchema.extend({
 
 export type GefDissHeaders = z.infer<typeof gefDissHeadersSchema>;
 
+// #CHILD= iIndex, sReference[, value, sUnit, sQuantity[, iQuantityNumber[, sExplanation]]]
+// Per GEF-CPT 1.1.0 spec section 2.6.8: iIndex and sReference are mandatory
+const childSchema = z
+  .array(z.string().trim())
+  .min(2)
+  .transform((arr) => {
+    const index = z.coerce.number().int().min(1).max(1500).parse(arr[0]);
+    const reference = arr[1] ?? "";
+
+    // value, unit, and quantity form an optional group
+    let value: number | undefined;
+    if (arr[2] !== undefined && arr[2] !== "") {
+      const parsed = z.coerce.number().safeParse(arr[2]);
+      value = parsed.success ? parsed.data : undefined;
+    }
+    const unit = arr[3] ?? undefined;
+    const quantity = arr[4] ?? undefined;
+
+    // quantityNumber and explanation are optional, nested after the value group
+    let quantityNumber: number | undefined;
+    if (arr[5] !== undefined && arr[5] !== "") {
+      const parsed = z.coerce.number().int().safeParse(arr[5]);
+      quantityNumber = parsed.success ? parsed.data : undefined;
+    }
+    const explanation = arr[6] ?? undefined;
+
+    return {
+      index,
+      reference,
+      value,
+      unit,
+      quantity,
+      quantityNumber,
+      explanation,
+    };
+  });
+
+export type Child = z.infer<typeof childSchema>;
+
 const gefCptHeadersSchema = gefBaseHeadersSchema.extend({
   COLUMNMINMAX: z
     .array(z.tuple([z.coerce.number(), z.coerce.number(), z.coerce.number()]))
@@ -701,6 +740,11 @@ const gefCptHeadersSchema = gefBaseHeadersSchema.extend({
     .transform((arr) =>
       arr?.map(([columnNumber, min, max]) => ({ columnNumber, min, max })),
     ),
+
+  CHILD: z
+    .array(z.array(z.string()).min(2))
+    .optional()
+    .transform((arr) => arr?.map((c) => childSchema.parse(c))),
 });
 
 export type GefCptHeaders = z.infer<typeof gefCptHeadersSchema>;
