@@ -6,7 +6,7 @@ A TypeScript library for parsing GEF (Geotechnical Exchange Format) files. GEF i
 
 This parser handles the GEF format specification, coordinate transformations, and provides typed data structures for analysis and visualization. It uses the WebAssembly build of [gef-file-to-map](https://github.com/cemsbv/gef-file-to-map) for initial tokenization, with all CSV parsing, header validation, and domain logic implemented in TypeScript using zod.
 
-**[Try the live demo](https://gef.bedrock.engineer)** | **[View example usage](https://github.com/bedrock-engineer/gef-app)**
+**[Try the live demo](https://gef.bedrock.engineer)**
 
 ## Features
 
@@ -17,7 +17,6 @@ This parser handles the GEF format specification, coordinate transformations, an
 - Support for [Dutch (BRO/VOTB)](https://votb.nl/wp-content/uploads/2016/02/180712-tekst-GEF-1.1.3-BRO-converter.pdf) and [Belgian (DOV) extensions](https://www.milieuinfo.be/confluence/x/5PQlC)
 - Coordinate system conversion to WGS84
 - Depth correction for inclinometer data
-- TypeScript support with type definitions
 
 GEF-SIEVE files are not supported.
 
