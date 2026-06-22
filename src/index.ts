@@ -23,6 +23,7 @@ export type {
 } from "./gef-common.js";
 
 export type { GefCptData, PreExcavationLayer } from "./gef-cpt.js";
+export type { CptRow } from "./depth-correction.js";
 export type { GefBoreData, BoreLayer, BoreSpecimen } from "./gef-bore.js";
 export type { GefDissData, DissRow } from "./gef-diss.js";
 

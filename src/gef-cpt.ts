@@ -319,7 +319,10 @@ export function findCptMeasurementVariable(
   extension: GefExtension,
 ) {
   const variables = getCptMeasurementVariablesForExtension(extension);
-  return variables[id as keyof typeof variables];
+  // Indexing by an arbitrary id can miss; the lookup is genuinely optional.
+  return variables[id as keyof typeof variables] as
+    | (typeof variables)[keyof typeof variables]
+    | undefined;
 }
 
 /**

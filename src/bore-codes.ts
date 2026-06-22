@@ -1,5 +1,6 @@
 export {
   decodeBoreCode,
+  parseSoilCode,
   getSoilCodeFromDescription,
   NEN5104_SOIL_CODES,
   NON_STANDARD_SOIL_CODES,
@@ -24,3 +25,5 @@ export {
   GEOLOGICAL_INTERPRETATION,
   STRATIGRAPHIC_UNITS,
 } from "./gef-bore-codes.js";
+
+export type { SoilCode, SoilAdmixture } from "./gef-bore-codes.js";

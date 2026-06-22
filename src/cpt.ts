@@ -11,6 +11,8 @@ export {
 export type { GefExtension } from "./gef-cpt.js";
 export type { GefCptHeaders } from "./gef-schemas.js";
 
+export { cptColumnQuantities } from "./gef-cpt-spec.js";
+
 export {
   broMeasurementVariables,
   broMeasurementTextVariables,

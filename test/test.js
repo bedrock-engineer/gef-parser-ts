@@ -12,6 +12,8 @@ import initGefFileToMap from '../dist/wasm/gef_file_to_map.js';
 
 // Import the parser
 import { parseGefFile } from '../dist/index.js';
+import { parseSoilCode, decodeBoreCode } from '../dist/bore-codes.js';
+import { getSoilColor } from '../dist/bore.js';
 
 // Initialize WASM with the file buffer (for Node.js)
 const wasmPath = join(__dirname, '../dist/wasm/gef_file_to_map_bg.wasm');
@@ -168,5 +170,77 @@ describe('BORE (B61F3158.gef)', async () => {
   test('first layer: depthTop 0, depthBottom 3.5', () => {
     assert.equal(bore2.layers[0].depthTop, 0);
     assert.equal(bore2.layers[0].depthBottom, 3.5);
+  });
+});
+
+describe('soil code grammar (parseSoilCode)', () => {
+  test('composite code: main soil + graded admixtures', () => {
+    const parsed = parseSoilCode('Ks1h3');
+    assert.equal(parsed.main, 'K');
+    assert.deepEqual(parsed.admixtures, [
+      { letter: 's', grade: 1 },
+      { letter: 'h', grade: 3 },
+    ]);
+    assert.deepEqual(parsed.qualifiers, []);
+  });
+
+  test('trailing qualifier is split off the lithology', () => {
+    const parsed = parseSoilCode('Zs1 GCZ');
+    assert.equal(parsed.lithology, 'Zs1');
+    assert.equal(parsed.main, 'Z');
+    assert.deepEqual(parsed.qualifiers, ['GCZ']);
+  });
+
+  test('ungraded admixture has undefined grade', () => {
+    const parsed = parseSoilCode('Vm');
+    assert.equal(parsed.main, 'V');
+    assert.deepEqual(parsed.admixtures, [{ letter: 'm', grade: undefined }]);
+  });
+
+  test('special codes (uppercase second letter) are not decomposed', () => {
+    assert.equal(parseSoilCode('NBE').main, '');
+    assert.equal(parseSoilCode('GM').main, ''); // grind letter, but "geen monster"
+  });
+});
+
+describe('soil code decoding (decodeBoreCode)', () => {
+  test('whole-token dictionary hit', () => {
+    assert.equal(decodeBoreCode('Ks1'), 'Klei, zwak siltig');
+    assert.equal(decodeBoreCode('Vm'), 'Veen, mineraalarm');
+    assert.equal(decodeBoreCode('NBE'), 'niet benoemd');
+  });
+
+  test('composite code is composed from its parts', () => {
+    assert.equal(decodeBoreCode('Ks1h3'), 'Klei, zwak siltig, sterk humeus');
+    assert.equal(decodeBoreCode('Ks2h1'), 'Klei, matig siltig, zwak humeus');
+  });
+
+  test('trailing qualifier is appended', () => {
+    assert.equal(decodeBoreCode('Zs1 GCZ'), 'Zand, zwak siltig, glauconietzand');
+  });
+
+  test('unrecognized code is returned unchanged', () => {
+    assert.equal(decodeBoreCode('QQ'), 'QQ');
+  });
+});
+
+describe('soil colour (getSoilColor)', () => {
+  test('exact curated shade wins', () => {
+    assert.equal(getSoilColor('Kz3g2'), '#4B3315');
+    assert.equal(getSoilColor('NBE'), '#808080');
+  });
+
+  test('graded shade reconstructed from structure for composite code', () => {
+    // "Ks2h1" has no exact entry; the "Ks2" shade is found via its structure.
+    assert.equal(getSoilColor('Ks2h1'), '#7B6345');
+  });
+
+  test('falls back to main soil base colour', () => {
+    assert.equal(getSoilColor('Zk'), '#FFE4A8'); // base Z; "Zk" has no exact entry
+  });
+
+  test('special / unknown code falls back to grey', () => {
+    assert.equal(getSoilColor('GM'), '#808080');
+    assert.equal(getSoilColor('QQ'), '#CCCCCC');
   });
 });

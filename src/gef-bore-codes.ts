@@ -447,11 +447,140 @@ export function getSoilCodeFromDescription(description: string): string {
   return "NBE";
 }
 
+// =============================================================================
+// Soil-code structure (NEN 5104 grammar)
+// =============================================================================
+
 /**
- * Decode a GEF-BORE code to its Dutch description
- * Returns the original code if not found
+ * NEN 5104 main soil letters (hoofdgrondsoort): G grind, K klei, L leem,
+ * V veen, Z zand. Every decomposable soil code starts with one of these.
+ */
+const MAIN_SOIL_LETTERS = new Set(["G", "K", "L", "V", "Z"]);
+
+/** A single admixture (toevoeging) within a soil code, e.g. the `s1` in `Ks1`. */
+export interface SoilAdmixture {
+  /** Admixture letter: s siltig, z zandig, g grindig, h humeus, k kleiig, m mineraalarm. */
+  letter: string;
+  /** Grade 1 (zwak) – 4 (uiterst), or undefined when the admixture is ungraded. */
+  grade?: number;
+}
+
+/**
+ * The structural decomposition of a GEF-BORE soil code, which embeds the
+ * NEN 5104 grammar: a main soil letter followed by `letter[grade]` admixtures
+ * ("Ks1h3" = klei + zwak siltig + sterk humeus), optionally trailed by
+ * space-separated qualifiers ("Zs1 GCZ" -> qualifier "GCZ", glauconietzand).
+ */
+export interface SoilCode {
+  /** First whitespace-separated token — the lithology, e.g. "Ks1h3" or "NBE". */
+  lithology: string;
+  /** Main soil letter (G/K/L/V/Z), or "" for special/unknown codes (NBE, GM). */
+  main: string;
+  /** Admixtures parsed from the lithology, in source order. */
+  admixtures: Array<SoilAdmixture>;
+  /** Trailing qualifier tokens, e.g. ["GCZ"] for "Zs1 GCZ". */
+  qualifiers: Array<string>;
+}
+
+/**
+ * Parse a GEF-BORE soil code into its NEN 5104 structure. This is the single
+ * source of truth for the grammar of these codes; `decodeBoreCode` (text) and
+ * `getSoilColor` (colour) are interpreters built on top of it.
+ *
+ * Always returns a structure — never throws. Special codes that don't start
+ * with a main soil (NBE "niet benoemd", GM "geen monster") come back with
+ * `main: ""` and no admixtures, so callers can branch on `main`.
+ */
+export function parseSoilCode(code: string): SoilCode {
+  const [lithology = "", ...qualifiers] = code
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const first = lithology[0] ?? "";
+  const second = lithology[1];
+  // A main soil letter followed by nothing or a lowercase admixture letter is
+  // decomposable. An uppercase second letter marks a special code (GM, NBE).
+  const isMainSoil =
+    MAIN_SOIL_LETTERS.has(first) &&
+    (second === undefined || second === second.toLowerCase());
+
+  const admixtures: Array<SoilAdmixture> = [];
+  if (isMainSoil) {
+    const admixturePattern = /([a-z])([1-4])?/g;
+    let match: RegExpExecArray | null;
+    while ((match = admixturePattern.exec(lithology.slice(1))) !== null) {
+      admixtures.push({
+        letter: match[1] ?? "",
+        grade: match[2] === undefined ? undefined : Number(match[2]),
+      });
+    }
+  }
+
+  return {
+    lithology,
+    main: isMainSoil ? first : "",
+    admixtures,
+    qualifiers,
+  };
+}
+
+// =============================================================================
+// Soil-code decoding (text interpreter over parseSoilCode)
+// =============================================================================
+
+function capitalize(text: string): string {
+  return text.length > 0 ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+/** Look a single code up in the combined dictionary (case-tolerant). */
+function lookupCode(code: string): string | undefined {
+  return ALL_CODES[code.toUpperCase()] ?? ALL_CODES[code];
+}
+
+/**
+ * Decode the lithology token: prefer a curated whole-token description
+ * ("Ks1" -> "Klei, zwak siltig", "Vm" -> "Veen, mineraalarm"), otherwise
+ * compose it from the main soil plus each admixture ("Ks1h3" ->
+ * "Klei, zwak siltig, sterk humeus").
+ */
+function describeLithology(lithology: string): string {
+  const whole = lookupCode(lithology);
+  if (whole !== undefined) {
+    return whole;
+  }
+
+  const { main, admixtures } = parseSoilCode(lithology);
+  const mainName = main ? lookupCode(main) : undefined;
+  if (mainName === undefined) {
+    return lithology; // special/unknown — nothing to compose
+  }
+
+  const parts = [capitalize(mainName)];
+  for (const admixture of admixtures) {
+    // letter+grade matches dictionary keys like "S1"; an ungraded admixture
+    // uses the "X" suffix ("KX" -> "kleiig"), per NON_STANDARD_SOIL_CODES.
+    const gradeKey =
+      admixture.grade === undefined ? "X" : String(admixture.grade);
+    const name = lookupCode(admixture.letter + gradeKey);
+    if (name !== undefined) {
+      parts.push(name);
+    }
+  }
+  return parts.join(", ");
+}
+
+/**
+ * Decode a GEF-BORE code to its Dutch description. Handles single dictionary
+ * codes, composite NEN 5104 codes ("Ks1h3"), and trailing qualifiers
+ * ("Zs1 GCZ" -> "Zand, zwak siltig, glauconietzand"). Unknown tokens are kept
+ * verbatim, so an entirely unrecognized code is returned unchanged.
  */
 export function decodeBoreCode(code: string): string {
-  const upperCode = code.trim().toUpperCase();
-  return ALL_CODES[upperCode] ?? ALL_CODES[code] ?? code;
+  const { lithology, qualifiers } = parseSoilCode(code);
+  const parts = [describeLithology(lithology)];
+  for (const qualifier of qualifiers) {
+    parts.push(lookupCode(qualifier) ?? qualifier);
+  }
+  return parts.join(", ");
 }

@@ -14,7 +14,7 @@ import {
   type SpecimenText,
   type SpecimenVar,
 } from "./gef-schemas.js";
-import { BORE_LAYER_QUANTITY } from "./gef-bore-codes.js";
+import { BORE_LAYER_QUANTITY, parseSoilCode } from "./gef-bore-codes.js";
 import { z } from "zod";
 import type { GefWarning } from "./gef-warnings.js";
 import {
@@ -151,6 +151,7 @@ export const SOIL_COLORS: Record<string, string> = {
 
   // Anthropogenic (Made ground)
   NBE: "#808080", // gray - niet beschreven (not described)
+  GM: "#808080", // gray - geen monster (no sample)
 
   // Default
   default: "#CCCCCC",
@@ -245,45 +246,27 @@ function processBoreMeasurementText(
 }
 
 export function getSoilColor(code: string): string {
-  // First try exact match
-  if (SOIL_COLORS[code]) {
-    return SOIL_COLORS[code];
+  // Curated exact shade first (covers "Zs2", "Kz3g2", "NBE", …).
+  const exact = SOIL_COLORS[code];
+  if (exact) {
+    return exact;
   }
 
-  // Try matching main soil type (first character(s))
-  const prefixes = [
-    "Kz3g",
-    "Kz2g",
-    "Kz1g",
-    "Kz",
-    "Ks",
-    "Vk",
-    "Vz",
-    "Vh",
-    "Zs",
-    "Zg",
-    "Zk",
-    "Ls",
-    "Lz",
-    "Gf",
-    "Gm",
-    "Gz",
-    "K",
-    "V",
-    "Z",
-    "L",
-    "G",
-  ];
-
-  for (const prefix of prefixes) {
-    if (code.startsWith(prefix)) {
-      // Find a matching color
-      const matchingKey = Object.keys(SOIL_COLORS).find((k) =>
-        k.startsWith(prefix),
-      );
-      if (matchingKey && SOIL_COLORS[matchingKey]) {
-        return SOIL_COLORS[matchingKey];
+  const { main, admixtures } = parseSoilCode(code);
+  if (main) {
+    // Reconstruct a graded shade from the structure ("Ks2h1" -> "Ks2"), then
+    // fall back to the main soil's base colour.
+    const dominant = admixtures[0];
+    if (dominant?.grade !== undefined) {
+      const shade =
+        SOIL_COLORS[main + dominant.letter + String(dominant.grade)];
+      if (shade) {
+        return shade;
       }
+    }
+    const base = SOIL_COLORS[main];
+    if (base) {
+      return base;
     }
   }
 

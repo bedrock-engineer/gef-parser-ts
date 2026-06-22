@@ -1,6 +1,6 @@
 {
   "name": "@bedrock-engineer/gef-parser",
-  "version": "0.1.3-beta.2",
+  "version": "0.1.3",
   "sideEffects": false,
   "description": "Parse GEF (Geotechnical Exchange Format) files for CPT and Borehole data",
   "type": "module",
@@ -34,7 +34,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
   "scripts": {
     "build": "tsc && mkdir -p dist/wasm && cp src/wasm/* dist/wasm/",
