@@ -4,9 +4,15 @@
 
 A TypeScript library for parsing GEF (Geotechnical Exchange Format) files. GEF is the standard file format for exchanging geotechnical data in the Netherlands and Belgium, including Cone Penetration Test (CPT) measurements and borehole logs.
 
-This parser handles the GEF format specification, coordinate transformations, and provides typed data structures for analysis and visualization. It uses the WebAssembly build of [gef-file-to-map](https://github.com/cemsbv/gef-file-to-map) for initial tokenization, with all CSV parsing, header validation, and domain logic implemented in TypeScript using zod.
-
 **[Try the live demo](https://gef.bedrock.engineer)** | **[View example usage](https://github.com/bedrock-engineer/gef-app)**
+
+## About
+
+<a href="https://bedrock.engineer">
+<img src="https://bedrock.engineer/Bedrock_TextRight.png" width="300px" alt="Bedrock Logo" />
+</a>
+
+This parser handles the GEF format specification, coordinate transformations, and provides typed data structures for analysis and visualization. It uses the WebAssembly build of [gef-file-to-map](https://github.com/cemsbv/gef-file-to-map) for initial tokenization, with value parsing, header validation, and domain logic implemented in TypeScript using [zod](https://zod.dev/).
 
 ## Features
 
