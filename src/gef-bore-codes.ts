@@ -484,8 +484,9 @@ export interface SoilCode {
 
 /**
  * Parse a GEF-BORE soil code into its NEN 5104 structure. This is the single
- * source of truth for the grammar of these codes; `decodeBoreCode` (text) and
- * `getSoilColor` (colour) are interpreters built on top of it.
+ * source of truth for the grammar of these codes; `decodeBoreCode` (text) is
+ * an interpreter built on top of it. (Soil-log colours live in the consuming
+ * app, e.g. gef-webapp's `getSoilColor`, also built on this parser.)
  *
  * Always returns a structure — never throws. Special codes that don't start
  * with a main soil (NBE "niet benoemd", GM "geen monster") come back with

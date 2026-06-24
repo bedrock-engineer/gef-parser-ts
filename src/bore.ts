@@ -2,8 +2,6 @@ export {
   parseGefBoreData,
   processBoreMetadata,
   parseGefBoreSpecimens,
-  getSoilColor,
-  SOIL_COLORS,
   formatSpecimenCode,
   findBoreMeasurementVariable,
 } from "./gef-bore.js";

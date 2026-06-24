@@ -1,26 +1,29 @@
-import { processCommonFields, type GEFHeadersMap } from "./gef-common.js";
+import { z } from "zod";
+import { BORE_LAYER_QUANTITY } from "./gef-bore-codes.js";
+import {
+  boreMeasurementTextVariables,
+  boreMeasurementVariables,
+  SpecimenCode,
+} from "./gef-bore-spec.js";
 import type {
-  ProcessedMeasurement,
   ProcessedBoreMetadata,
+  ProcessedMeasurement,
   ProcessedText,
 } from "./gef-common.js";
+import { processCommonFields, type GEFHeadersMap } from "./gef-common.js";
 import {
   getMeasurementTextKey,
   getMeasurementVarKey,
 } from "./gef-measurement-mappings.js";
 import {
+  MeasurementText,
+  MeasurementVar,
   parseGefBoreHeaders,
   type GefBoreHeaders,
   type SpecimenText,
   type SpecimenVar,
 } from "./gef-schemas.js";
-import { BORE_LAYER_QUANTITY, parseSoilCode } from "./gef-bore-codes.js";
-import { z } from "zod";
 import type { GefWarning } from "./gef-warnings.js";
-import {
-  boreMeasurementTextVariables,
-  boreMeasurementVariables,
-} from "./gef-bore-spec.js";
 
 export interface GefBoreData {
   fileType: "BORE";
@@ -88,84 +91,8 @@ export function processBoreMetadata(
   };
 }
 
-// =============================================================================
-// Soil Colors and Types
-// =============================================================================
-
-// Soil type colors based on NEN 5104 main classifications
-export const SOIL_COLORS: Record<string, string> = {
-  // Gravel (Grind)
-  G: "#D4A574", // tan/brown
-  Gf: "#D4A574",
-  Gm: "#C4956A",
-  Gz: "#E4B584",
-
-  // Sand (Zand)
-  Z: "#FFE4A8", // yellow
-  Zs1: "#FFE4A8",
-  Zs2: "#FFD488",
-  Zs3: "#FFC468",
-  Zs4: "#FFB448",
-  Zg1: "#FFE4A8",
-  Zg2: "#FFD488",
-  Zg3: "#FFC468",
-  Zk1: "#FFECA8",
-  Zk2: "#FFDC88",
-  Zk3: "#FFCC68",
-
-  // Silt (Leem)
-  L: "#98D8C8", // greenish
-  Ls1: "#98D8C8",
-  Ls2: "#88C8B8",
-  Ls3: "#78B8A8",
-  Lz1: "#A8E8D8",
-  Lz2: "#88C8B8",
-  Lz3: "#68A898",
-
-  // Clay (Klei)
-  K: "#8B7355", // brown
-  Ks1: "#8B7355",
-  Ks2: "#7B6345",
-  Ks3: "#6B5335",
-  Kz1: "#9B8365",
-  Kz2: "#8B7355",
-  Kz3: "#7B6345",
-  Kz1g1: "#9B8365",
-  Kz1g2: "#8B7355",
-  Kz2g1: "#7B6345",
-  Kz2g2: "#6B5335",
-  Kz3g1: "#5B4325",
-  Kz3g2: "#4B3315",
-
-  // Peat (Veen)
-  V: "#4A3728", // dark brown
-  Vk1: "#5A4738",
-  Vk2: "#4A3728",
-  Vk3: "#3A2718",
-  Vz1: "#5A4738",
-  Vz2: "#4A3728",
-  Vz3: "#3A2718",
-  Vh1: "#6A5748",
-  Vh2: "#5A4738",
-  Vh3: "#4A3728",
-
-  // Anthropogenic (Made ground)
-  NBE: "#808080", // gray - niet beschreven (not described)
-  GM: "#808080", // gray - geen monster (no sample)
-
-  // Default
-  default: "#CCCCCC",
-};
-
 function processBoreMeasurementVar(
-  MEASUREMENTVAR:
-    | Array<{
-        id: number;
-        value: number | undefined;
-        unit: string;
-        description: string;
-      }>
-    | undefined,
+  MEASUREMENTVAR: Array<MeasurementVar> | undefined,
 ) {
   const measurements: Record<string, ProcessedMeasurement> = {};
 
@@ -203,13 +130,7 @@ function processBoreMeasurementVar(
 }
 
 function processBoreMeasurementText(
-  MEASUREMENTTEXT:
-    | Array<{
-        id: number;
-        text: string;
-        extra: Array<string>;
-      }>
-    | undefined,
+  MEASUREMENTTEXT: Array<MeasurementText> | undefined,
 ) {
   // Process all MEASUREMENTTEXT values using BORE-specific metadata
   const texts: Record<string, ProcessedText> = {};
@@ -245,34 +166,6 @@ function processBoreMeasurementText(
   return texts;
 }
 
-export function getSoilColor(code: string): string {
-  // Curated exact shade first (covers "Zs2", "Kz3g2", "NBE", …).
-  const exact = SOIL_COLORS[code];
-  if (exact) {
-    return exact;
-  }
-
-  const { main, admixtures } = parseSoilCode(code);
-  if (main) {
-    // Reconstruct a graded shade from the structure ("Ks2h1" -> "Ks2"), then
-    // fall back to the main soil's base colour.
-    const dominant = admixtures[0];
-    if (dominant?.grade !== undefined) {
-      const shade =
-        SOIL_COLORS[main + dominant.letter + String(dominant.grade)];
-      if (shade) {
-        return shade;
-      }
-    }
-    const base = SOIL_COLORS[main];
-    if (base) {
-      return base;
-    }
-  }
-
-  return SOIL_COLORS.default ?? "#CCCCCC";
-}
-
 // Bore layer data structure
 export interface BoreLayer {
   depthTop: number;
@@ -296,7 +189,7 @@ export interface BoreLayer {
  */
 export function formatSpecimenCode(
   code: string | undefined,
-  codeList: ReadonlyArray<{ code: string; nl: string; en: string }>,
+  codeList: ReadonlyArray<SpecimenCode>,
   language: "nl" | "en" = "nl",
 ): string | undefined {
   if (!code) {
