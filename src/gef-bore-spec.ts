@@ -538,14 +538,6 @@ export interface BoreMeasurementVariable {
   category: string;
   dataType: string;
 }
-export const SOIL_TYPE_NAMES: Record<string, string> = {
-  G: "Grind",
-  Z: "Zand",
-  L: "Leem",
-  K: "Klei",
-  V: "Veen",
-  NBE: "Niet beschreven",
-};
 export interface SpecimenCode {
   code: string;
   nl: string;

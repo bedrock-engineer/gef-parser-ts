@@ -1118,12 +1118,6 @@ export const cptMeasurementTextVariables = {
   },
 };
 
-export type CptMeasurementVariable =
-  (typeof cptMeasurementVariables)[keyof typeof cptMeasurementVariables];
-
-export type CptMeasurementTextVariable =
-  (typeof cptMeasurementTextVariables)[keyof typeof cptMeasurementTextVariables];
-
 // =============================================================================
 // DUTCH EXTENSIONS (BRO + VOTB)
 // BRO: Basis Registratie Ondergrond - regulatory submission fields

@@ -13,5 +13,3 @@ npm-debug.log*
 .DS_Store
 .vscode/
 .idea/
-
-RUST.md

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BORE_LAYER_QUANTITY } from "./gef-bore-codes.js";
+import {
+  BORE_LAYER_QUANTITY,
+  decodeBoreCode,
+  parseSoilCode,
+  type SoilCode,
+} from "./gef-bore-codes.js";
 import {
   boreMeasurementTextVariables,
   boreMeasurementVariables,
@@ -172,6 +177,14 @@ export interface BoreLayer {
   depthBottom: number;
   soilCode: string;
   additionalCodes: Array<string>;
+  /** Structured NEN 5104 decomposition of `soilCode` (main soil + graded admixtures). */
+  soil: SoilCode;
+  /**
+   * Decoded Dutch description of the whole layer: `soilCode` plus the coded
+   * `additionalCodes` (colours, layering, qualifiers). Excludes the free-text
+   * driller's remark, which stays in `description`.
+   */
+  soilText: string;
   description?: string;
   // Numeric properties (may be null/void)
   sandMedian?: number | null;
@@ -181,6 +194,25 @@ export interface BoreLayer {
   sandPercent?: number | null;
   gravelPercent?: number | null;
   organicPercent?: number | null;
+}
+
+/**
+ * Turn a layer's raw code strings into structure: the NEN 5104 decomposition of
+ * `soilCode` (`soil`) and a decoded Dutch description of the whole layer
+ * (`soilText`). `additionalCodes` should already have the free-text driller's
+ * remark removed, so `soilText` decodes only recognised codes; unknown codes are
+ * kept verbatim by `decodeBoreCode`. Never throws.
+ */
+function hydrateSoil(
+  soilCode: string,
+  additionalCodes: Array<string>,
+): { soil: SoilCode; soilText: string } {
+  const soil = parseSoilCode(soilCode);
+  const soilText = [soilCode, ...additionalCodes]
+    .filter((code) => code.length > 0)
+    .map((code) => decodeBoreCode(code))
+    .join(", ");
+  return { soil, soilText };
 }
 
 /**
@@ -372,11 +404,17 @@ export function parseGefBoreData(
       }
     }
 
+    // Hydrate soil structure + decoded text from the remaining coded tokens
+    // (free-text remark already popped into `description`).
+    const { soil, soilText } = hydrateSoil(soilCode, additionalCodes);
+
     return {
       depthTop,
       depthBottom,
       soilCode,
       additionalCodes,
+      soil,
+      soilText,
       description,
       // Optional layer characteristics - use quantity numbers from Table 2.18
       clayPercent: getValueByQuantity(BORE_LAYER_QUANTITY.CLAY_PERCENT),

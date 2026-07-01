@@ -148,7 +148,7 @@ export type ProcessedMetadata =
 
 // -- Shared data-parsing helpers --
 
-export interface ParseRecordsConfig {
+interface ParseRecordsConfig {
   columnSeparator: string | RegExp;
   recordSeparator: string | RegExp;
   columnInfo: Array<ColumnInfo>;
@@ -158,7 +158,7 @@ export interface ParseRecordsConfig {
   absoluteValueColumns?: Set<number>;
 }
 
-export interface ParseRecordsResult {
+interface ParseRecordsResult {
   rows: Array<Record<string, number | string | null | undefined>>;
   warnings: Array<GefWarning>;
 }

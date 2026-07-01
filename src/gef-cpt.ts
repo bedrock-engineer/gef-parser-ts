@@ -528,7 +528,7 @@ export function findColumnByQuantity(
   return columns.find((col) => col.quantityNumber === quantityNumber);
 }
 
-export const DEPTH_KEYWORDS = [
+const DEPTH_KEYWORDS = [
   "penetration",
   "sondeer",
   "length",
