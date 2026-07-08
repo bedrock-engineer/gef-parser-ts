@@ -1,6 +1,6 @@
 {
   "name": "@bedrock-engineer/gef-parser",
-  "version": "0.3.0-beta.0",
+  "version": "0.3.0",
   "sideEffects": false,
   "description": "Parse GEF (Geotechnical Exchange Format) files for CPT and Borehole data",
   "type": "module",
