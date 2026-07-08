@@ -1,7 +1,12 @@
 export {
   decodeBoreCode,
+  describeSoilCode,
   parseSoilCode,
+  parseSoilDescription,
   getSoilCodeFromDescription,
+  NEN5104_MAIN_SOILS,
+  NEN5104_ADMIXTURES,
+  NEN5104_GRADES,
   NEN5104_SOIL_CODES,
   NON_STANDARD_SOIL_CODES,
   ADDITIONAL_SOIL_CODES,
@@ -26,4 +31,8 @@ export {
   STRATIGRAPHIC_UNITS,
 } from "./gef-bore-codes.js";
 
-export type { SoilCode, SoilAdmixture } from "./gef-bore-codes.js";
+export type {
+  SoilCode,
+  SoilAdmixture,
+  Nen5104Admixture,
+} from "./gef-bore-codes.js";

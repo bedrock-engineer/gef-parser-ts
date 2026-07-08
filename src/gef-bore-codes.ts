@@ -20,6 +20,64 @@ export const BORE_LAYER_QUANTITY = {
   GRAVEL_MEDIAN: 9, // optioneel - Grindmediaan
 } as const;
 
+// =============================================================================
+// NEN 5104 vocabulary (canonical grammar)
+//
+// Single source of truth for the *structure* of the compositional core of
+// NEN 5104: main soils, admixtures, and grades. The grammar (`parseSoilCode`),
+// the text decoder (`decodeBoreCode`), and the description parser
+// (`getSoilCodeFromDescription`) are all interpreters over these tables, and
+// consuming apps should derive from them instead of restating them.
+//
+// Spec *text* is a different matter: `NEN5104_SOIL_CODES` below transcribes
+// Tabel 2.15 verbatim and takes precedence when decoding to Dutch, because the
+// spec's wording is irregular for veen (see `admixtureGradeWord`). A test
+// keeps the table and the composed grammar in agreement.
+// (Presentation — colours, hatch patterns, band fractions, translations —
+// deliberately lives in the consuming app.)
+// =============================================================================
+
+/** NEN 5104 main soils (hoofdgrondsoort): code letter -> Dutch noun. */
+export const NEN5104_MAIN_SOILS: Record<string, string> = {
+  G: "grind",
+  K: "klei",
+  L: "leem",
+  V: "veen",
+  Z: "zand",
+};
+
+/** A NEN 5104 admixture (toevoeging), keyed by its lowercase code letter. */
+export interface Nen5104Admixture {
+  /** Dutch adjective as it appears in descriptions ("siltig"). */
+  adjective: string;
+  /**
+   * Main soil the admixture material corresponds to ("s" siltig -> "L" leem),
+   * e.g. for colouring composition sub-bands. Undefined for pure qualifiers
+   * like "m" (mineraalarm), which describe the soil rather than add material.
+   */
+  soil?: string;
+  /** Non-standard synonyms seen in practice ("lemig" for siltig). */
+  synonyms?: Array<string>;
+}
+
+/** NEN 5104 admixtures (toevoegingen): code letter -> adjective + related soil. */
+export const NEN5104_ADMIXTURES: Record<string, Nen5104Admixture> = {
+  g: { adjective: "grindig", soil: "G" },
+  h: { adjective: "humeus", soil: "V", synonyms: ["venig"] },
+  k: { adjective: "kleiig", soil: "K" },
+  m: { adjective: "mineraalarm" },
+  s: { adjective: "siltig", soil: "L", synonyms: ["lemig"] },
+  z: { adjective: "zandig", soil: "Z" },
+};
+
+/** NEN 5104 admixture grades (gradatie): 1 zwak … 4 uiterst. */
+export const NEN5104_GRADES: Record<number, string> = {
+  1: "zwak",
+  2: "matig",
+  3: "sterk",
+  4: "uiterst",
+};
+
 // Table 2.15: Grondsoorten volgens NEN 5104
 export const NEN5104_SOIL_CODES: Record<string, string> = {
   // Grind
@@ -65,11 +123,7 @@ export const NEN5104_SOIL_CODES: Record<string, string> = {
 
 // Table 2.16: Grondsoorten niet volgens NEN 5104
 export const NON_STANDARD_SOIL_CODES: Record<string, string> = {
-  G: "grind",
-  K: "klei",
-  L: "leem",
-  V: "veen",
-  Z: "zand",
+  ...NEN5104_MAIN_SOILS, // the table's first five rows are the main soils
   KX: "kleiig",
   K1: "zwak kleiig",
   K3: "sterk kleiig",
@@ -421,30 +475,131 @@ const ALL_CODES: Record<string, string> = {
   ...STRATIGRAPHIC_UNITS,
 };
 
+// --- Lookups derived from the vocabulary (never hand-maintained) -------------
+
+/** Dutch main-soil noun -> code letter, for description parsing. */
+const MAIN_SOIL_WORDS = new Map(
+  Object.entries(NEN5104_MAIN_SOILS).map(([letter, noun]) => [noun, letter]),
+);
+
+// Standalone main-soil noun; matching yields the earliest one in the text.
+const MAIN_SOIL_PATTERN = new RegExp(
+  `\\b(${[...MAIN_SOIL_WORDS.keys()].join("|")})\\b`,
+);
+
+/** Dutch attributive inflection: "zandig" -> "zandige", "humeus" -> "humeuze". */
+function inflect(adjective: string): string {
+  return adjective.endsWith("s")
+    ? `${adjective.slice(0, -1)}ze`
+    : `${adjective}e`;
+}
+
 /**
- * Get soil code from a Dutch description by keyword matching
- * Returns the main soil type code (G, K, L, V, Z) or "NBE" if not found
+ * Admixture adjective (incl. synonyms and inflected forms) -> code letter.
+ * Inflected forms cover adjective-first phrasing ("sterk zandige klei").
+ */
+const ADMIX_WORDS = new Map(
+  Object.entries(NEN5104_ADMIXTURES).flatMap(([letter, admixture]) =>
+    [admixture.adjective, ...(admixture.synonyms ?? [])].flatMap(
+      (word): Array<[string, string]> => [
+        [word, letter],
+        [inflect(word), letter],
+      ],
+    ),
+  ),
+);
+
+/** Grade adverb -> grade number ("zwak" -> 1). */
+const GRADE_WORDS = new Map(
+  Object.entries(NEN5104_GRADES).map(([grade, word]) => [word, Number(grade)]),
+);
+
+/** Admixture letters `parseSoilCode` can legitimately produce. */
+const ADMIX_LETTERS = new Set(Object.keys(NEN5104_ADMIXTURES));
+
+// Optional grade adverb + admixture adjective, matched as standalone words
+// (not substrings) so compounds don't produce false positives.
+const ADMIX_PATTERN = new RegExp(
+  `(?:\\b(${[...GRADE_WORDS.keys()].join("|")})\\s+)?` +
+    `\\b(${[...ADMIX_WORDS.keys()].join("|")})\\b`,
+  "g",
+);
+
+/**
+ * Parse a free-text Dutch soil description into its NEN 5104 structure,
+ * e.g. "zand matig fijn zwak siltig" -> the structure of "Zs1". A description
+ * that already is a valid soil code ("Ks1", "NBE") is parsed as such.
+ * Unrecognised text comes back as the special code "NBE".
+ *
+ * The returned `lithology` is the derived soil-code string, so consumers can
+ * treat description-based layers (e.g. CPT pre-excavation) exactly like coded
+ * borehole layers.
+ */
+export function parseSoilDescription(description: string): SoilCode {
+  const trimmed = description.trim();
+
+  // Already a soil code? Accept only when every parsed admixture letter is a
+  // real NEN 5104 letter, so Dutch words ("Klei" -> l/e/i) don't slip through.
+  // Special no-data codes (NBE, GM) pass through as well.
+  const direct = parseSoilCode(trimmed);
+  
+  if (
+    (direct.main &&
+      direct.qualifiers.length === 0 &&
+      direct.admixtures.every((a) => ADMIX_LETTERS.has(a.letter))) ||
+    direct.lithology === "NBE" ||
+    direct.lithology === "GM"
+  ) {
+    return direct;
+  }
+
+  const lower = trimmed.toLowerCase();
+
+  // Main soil = earliest standalone soil noun. Descriptions lead with the
+  // main soil ("klei zwak siltig"), so position beats any fixed priority.
+  const mainWord = lower.match(MAIN_SOIL_PATTERN)?.[1];
+  const main = MAIN_SOIL_WORDS.get(mainWord ?? "") ?? "";
+
+  if (!main) {
+    return { lithology: "NBE", main: "", admixtures: [], qualifiers: [] };
+  }
+
+  // Collect graded admixtures ("zwak siltig" -> s1). An adjective without a
+  // grade adverb becomes an ungraded letter ("kleiig" -> k).
+  const admixtures: Array<SoilAdmixture> = [];
+  const seen = new Set<string>();
+
+  for (const match of lower.matchAll(ADMIX_PATTERN)) {
+    const grade = match[1] ? GRADE_WORDS.get(match[1]) : undefined;
+    const letter = ADMIX_WORDS.get(match[2] ?? "");
+    // Skip repeats and adjectives restating the main soil ("zand ... zandig",
+    // "leem ... lemig").
+    if (
+      !letter ||
+      NEN5104_ADMIXTURES[letter]?.soil === main ||
+      seen.has(letter)
+    ) {
+      continue;
+    }
+    seen.add(letter);
+    admixtures.push({ letter, grade });
+  }
+
+  return {
+    lithology:
+      main + admixtures.map((a) => `${a.letter}${a.grade ?? ""}`).join(""),
+    main,
+    admixtures,
+    qualifiers: [],
+  };
+}
+
+/**
+ * Derive a NEN 5104-style soil code string from a free-text Dutch soil
+ * description ("leem zwak zandig" -> "Lz1"); see `parseSoilDescription`.
  */
 export function getSoilCodeFromDescription(description: string): string {
-  const lower = description.toLowerCase();
-
-  if (lower.includes("grind")) {
-    return "G";
-  }
-  if (lower.includes("veen")) {
-    return "V";
-  }
-  if (lower.includes("klei")) {
-    return "K";
-  }
-  if (lower.includes("leem")) {
-    return "L";
-  }
-  if (lower.includes("zand")) {
-    return "Z";
-  }
-
-  return "NBE";
+  return parseSoilDescription(description).lithology;
 }
 
 // =============================================================================
@@ -452,10 +607,10 @@ export function getSoilCodeFromDescription(description: string): string {
 // =============================================================================
 
 /**
- * NEN 5104 main soil letters (hoofdgrondsoort): G grind, K klei, L leem,
- * V veen, Z zand. Every decomposable soil code starts with one of these.
+ * NEN 5104 main soil letters (hoofdgrondsoort). Every decomposable soil code
+ * starts with one of these.
  */
-const MAIN_SOIL_LETTERS = new Set(["G", "K", "L", "V", "Z"]);
+const MAIN_SOIL_LETTERS = new Set(Object.keys(NEN5104_MAIN_SOILS));
 
 /** A single admixture (toevoeging) within a soil code, e.g. the `s1` in `Ks1`. */
 export interface SoilAdmixture {
@@ -540,34 +695,69 @@ function lookupCode(code: string): string | undefined {
 }
 
 /**
- * Decode the lithology token: prefer a curated whole-token description
+ * Grade adverb for an admixture. Tabel 2.15 verbalizes grade 3 as "matig"
+ * inside the veen triangle (Vk3 "matig kleiig", Vz3 "matig zandig"), unlike
+ * everywhere else where 3 is "sterk" (Ks3, g3, h3, ...).
+ */
+function admixtureGradeWord(
+  main: string,
+  { letter, grade }: SoilAdmixture,
+): string | undefined {
+  if (grade === undefined) {
+    return undefined;
+  }
+
+  if (main === "V" && grade === 3 && (letter === "k" || letter === "z")) {
+    return "matig";
+  }
+  
+  return NEN5104_GRADES[grade];
+}
+
+/**
+ * Decode the lithology token: prefer the verbatim Tabel 2.15 description
  * ("Ks1" -> "Klei, zwak siltig", "Vm" -> "Veen, mineraalarm"), otherwise
  * compose it from the main soil plus each admixture ("Ks1h3" ->
  * "Klei, zwak siltig, sterk humeus").
  */
-function describeLithology(lithology: string): string {
+function describeLithology({ lithology, main, admixtures }: SoilCode): string {
   const whole = lookupCode(lithology);
   if (whole !== undefined) {
     return whole;
   }
 
-  const { main, admixtures } = parseSoilCode(lithology);
-  const mainName = main ? lookupCode(main) : undefined;
+  const mainName = main ? NEN5104_MAIN_SOILS[main] : undefined;
   if (mainName === undefined) {
     return lithology; // special/unknown — nothing to compose
   }
 
   const parts = [capitalize(mainName)];
   for (const admixture of admixtures) {
-    // letter+grade matches dictionary keys like "S1"; an ungraded admixture
-    // uses the "X" suffix ("KX" -> "kleiig"), per NON_STANDARD_SOIL_CODES.
-    const gradeKey =
-      admixture.grade === undefined ? "X" : String(admixture.grade);
-    const name = lookupCode(admixture.letter + gradeKey);
-    if (name !== undefined) {
-      parts.push(name);
+    const spec = NEN5104_ADMIXTURES[admixture.letter];
+    
+    if (spec === undefined) {
+      continue; // unknown admixture letter — skip, keep the rest readable
     }
+
+    const gradeWord = admixtureGradeWord(main, admixture);
+    parts.push(gradeWord ? `${gradeWord} ${spec.adjective}` : spec.adjective);
   }
+
+  return parts.join(", ");
+}
+
+/**
+ * Render an already-parsed soil code to its Dutch description; the
+ * structure-level counterpart of `decodeBoreCode` for callers that hold a
+ * `SoilCode` (from `parseSoilCode` or `parseSoilDescription`).
+ */
+export function describeSoilCode(soil: SoilCode): string {
+  const parts = [describeLithology(soil)];
+
+  for (const qualifier of soil.qualifiers) {
+    parts.push(lookupCode(qualifier) ?? qualifier);
+  }
+
   return parts.join(", ");
 }
 
@@ -578,10 +768,5 @@ function describeLithology(lithology: string): string {
  * verbatim, so an entirely unrecognized code is returned unchanged.
  */
 export function decodeBoreCode(code: string): string {
-  const { lithology, qualifiers } = parseSoilCode(code);
-  const parts = [describeLithology(lithology)];
-  for (const qualifier of qualifiers) {
-    parts.push(lookupCode(qualifier) ?? qualifier);
-  }
-  return parts.join(", ");
+  return describeSoilCode(parseSoilCode(code));
 }

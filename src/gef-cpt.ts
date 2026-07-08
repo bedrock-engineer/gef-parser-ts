@@ -33,6 +33,11 @@ import {
   type GefCptHeaders,
 } from "./gef-schemas.js";
 import type { GefWarning } from "./gef-warnings.js";
+import {
+  describeSoilCode,
+  parseSoilDescription,
+  type SoilCode,
+} from "./gef-bore-codes.js";
 
 export type GefExtension = "standard" | "bro" | "belgian" | "klasse1" | "votb";
 
@@ -43,6 +48,19 @@ export interface PreExcavationLayer {
   depthBottom: number; // Bottom of layer (m) - from SPECIMENVAR value
   description: string; // Soil description
   unit: string; // Soil description
+  /**
+   * NEN 5104-style soil code derived from `description` (e.g. "Ks1" for
+   * "klei zwak siltig"), "NBE" when no soil is recognised. Lets consumers
+   * treat pre-excavation layers like coded borehole layers.
+   */
+  soilCode: string;
+  /** Structured decomposition of `soilCode`, same shape as `BoreLayer.soil`. */
+  soil: SoilCode;
+  /**
+   * Normalised Dutch reading of `soilCode` ("Klei, zwak siltig"), same shape
+   * as `BoreLayer.soilText`. The verbatim driller text stays in `description`.
+   */
+  soilText: string;
 }
 
 export interface GefCptData {
@@ -193,11 +211,15 @@ export function parsePreExcavationLayers(
   for (const layer of sorted) {
     // Type assertion safe here because we filtered out undefined values above
     const depthBottom = layer.value;
+    const soil = parseSoilDescription(layer.description);
     layers.push({
       depthTop: previousDepth,
       depthBottom: depthBottom,
       description: layer.description,
       unit: layer.unit,
+      soilCode: soil.lithology,
+      soil,
+      soilText: describeSoilCode(soil),
     });
     previousDepth = depthBottom;
   }
