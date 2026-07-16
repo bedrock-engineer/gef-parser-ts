@@ -5,6 +5,8 @@ import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
+  // Generated wasm-bindgen artifacts — do not lint
+  { ignores: ["src/wasm/"] },
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   tseslint.configs.strictTypeChecked,

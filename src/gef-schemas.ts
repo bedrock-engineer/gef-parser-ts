@@ -376,12 +376,14 @@ const measurementVarSchema = z
 export type MeasurementVar = z.infer<typeof measurementVarSchema>;
 
 const measurementTextSchema = z
-  .tuple([z.coerce.number().int(), z.string().trim()])
-  .rest(z.string().trim())
-  .transform(([id, text, ...extra]) => ({
-    id,
-    text,
-    extra,
+  .array(z.string().trim())
+  .min(1)
+  // Text values may be empty (e.g. "#MEASUREMENTTEXT= 1, , Client") or absent
+  // entirely; treat them as "" rather than rejecting the whole file
+  .transform((arr) => ({
+    id: z.coerce.number().int().parse(arr[0]),
+    text: arr[1] ?? "",
+    extra: arr.slice(2),
   }))
   .pipe(
     z.object({
@@ -575,7 +577,7 @@ const gefBaseHeadersSchema = z.object({
     .transform((arr) => arr?.map((mv) => measurementVarSchema.parse(mv))),
 
   MEASUREMENTTEXT: z
-    .array(z.array(z.string()).min(2))
+    .array(z.array(z.string()).min(1))
     .optional()
     .transform((arr) => arr?.map((mt) => measurementTextSchema.parse(mt))),
 
