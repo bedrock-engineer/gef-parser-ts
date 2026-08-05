@@ -1,4 +1,4 @@
-import { StandardizedCode } from "./gef-bore.js";
+import type { StandardizedCode } from "./gef-bore.js";
 import {
   heightDeterminationCodes,
   placeDeterminationCodes,

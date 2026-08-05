@@ -3,7 +3,7 @@
  * All descriptions are in Dutch as per the original specification
  */
 
-// Table 2.18: Quantity numbers for layer characteristic columns
+/** Table 2.18: Quantity numbers for layer characteristic columns */
 // Per GEF-BORE spec section 2.3.2.1
 export const BORE_LAYER_QUANTITY = {
   // Required fields
@@ -78,7 +78,7 @@ export const NEN5104_GRADES: Record<number, string> = {
   4: "uiterst",
 };
 
-// Table 2.15: Grondsoorten volgens NEN 5104
+/** Table 2.15: Grondsoorten volgens NEN 5104 */
 export const NEN5104_SOIL_CODES: Record<string, string> = {
   // Grind
   Gs: "Grind, siltig",
@@ -121,7 +121,7 @@ export const NEN5104_SOIL_CODES: Record<string, string> = {
   NBE: "niet benoemd",
 };
 
-// Table 2.16: Grondsoorten niet volgens NEN 5104
+/** Table 2.16: Grondsoorten niet volgens NEN 5104 */
 export const NON_STANDARD_SOIL_CODES: Record<string, string> = {
   ...NEN5104_MAIN_SOILS, // the table's first five rows are the main soils
   KX: "kleiig",
@@ -147,7 +147,7 @@ export const NON_STANDARD_SOIL_CODES: Record<string, string> = {
   H3: "sterk humeus",
 };
 
-// Table 2.17: Aanvullende grondsoorten
+/** Table 2.17: Aanvullende grondsoorten */
 export const ADDITIONAL_SOIL_CODES: Record<string, string> = {
   // Grote korrels
   BLK: "blokken",
@@ -197,7 +197,7 @@ export const ADDITIONAL_SOIL_CODES: Record<string, string> = {
   YZ: "ijzer",
 };
 
-// Table 2.19: Tweede kleur
+/** Table 2.19: Tweede kleur */
 export const SECONDARY_COLORS: Record<string, string> = {
   TBL: "blauw-",
   TBR: "bruin-",
@@ -213,7 +213,7 @@ export const SECONDARY_COLORS: Record<string, string> = {
   TZW: "zwart-",
 };
 
-// Table 2.20: Hoofdkleur
+/** Table 2.20: Hoofdkleur */
 export const MAIN_COLORS: Record<string, string> = {
   BL: "blauw",
   BR: "bruin",
@@ -232,7 +232,7 @@ export const MAIN_COLORS: Record<string, string> = {
   DO: "donker",
 };
 
-// Table 2.21: Zandmediaanklasse
+/** Table 2.21: Zandmediaanklasse */
 export const SAND_MEDIAN_CLASSES: Record<string, string> = {
   ZUF: "uiterst fijn",
   ZZF: "zeer fijn",
@@ -242,7 +242,7 @@ export const SAND_MEDIAN_CLASSES: Record<string, string> = {
   ZUG: "uiterst grof",
 };
 
-// Table 2.22: Zandspreiding
+/** Table 2.22: Zandspreiding */
 export const SAND_SPREAD: Record<string, string> = {
   SZK: "zeer kleine spreiding",
   SMK: "matig kleine spreiding",
@@ -251,7 +251,7 @@ export const SAND_SPREAD: Record<string, string> = {
   STW: "tweetoppige spreiding",
 };
 
-// Table 2.23: Korrelvorm
+/** Table 2.23: Korrelvorm */
 export const GRAIN_SHAPE: Record<string, string> = {
   ZZH: "sterk hoekig",
   ZHK: "hoekig",
@@ -261,14 +261,14 @@ export const GRAIN_SHAPE: Record<string, string> = {
   ZSA: "sterk afgerond",
 };
 
-// Table 2.24: Grindmediaanklasse
+/** Table 2.24: Grindmediaanklasse */
 export const GRAVEL_MEDIAN_CLASSES: Record<string, string> = {
   GFN: "fijn grind",
   GMG: "matig grof grind",
   GZG: "zeer grof grind",
 };
 
-// Table 2.25: Grindfracties en hoeveelheden
+/** Table 2.25: Grindfracties en hoeveelheden */
 export const GRAVEL_FRACTIONS: Record<string, string> = {
   FN1: "spoor fijn grind",
   FN2: "weinig fijn grind",
@@ -287,14 +287,14 @@ export const GRAVEL_FRACTIONS: Record<string, string> = {
   GG5: "uiterst veel zeer grof grind",
 };
 
-// Table 2.26: Veen amorfiteit
+/** Table 2.26: Veen amorfiteit */
 export const PEAT_AMORPHOSITY: Record<string, string> = {
   AV1: "zwak amorf",
   AV2: "matig amorf",
   AV3: "sterk amorf",
 };
 
-// Table 2.27: Veensoorten
+/** Table 2.27: Veensoorten */
 export const PEAT_TYPES: Record<string, string> = {
   BSV: "bosveen",
   HEV: "heideveen",
@@ -306,7 +306,7 @@ export const PEAT_TYPES: Record<string, string> = {
   ZEV: "zeggeveen",
 };
 
-// Table 2.28: Consistentie
+/** Table 2.28: Consistentie */
 export const CONSISTENCY: Record<string, string> = {
   // Klei
   KZSL: "zeer slap",
@@ -334,14 +334,14 @@ export const CONSISTENCY: Record<string, string> = {
   VSTV: "stevig",
 };
 
-// Table 2.29: Zandcompactie
+/** Table 2.29: Zandcompactie */
 export const SAND_COMPACTION: Record<string, string> = {
   LOS: "los gepakt",
   NOR: "normaal gepakt",
   VAS: "vast gepakt",
 };
 
-// Table 2.30: Vast gesteente hardheid
+/** Table 2.30: Vast gesteente hardheid */
 export const ROCK_HARDNESS: Record<string, string> = {
   VGZZ: "zeer zacht",
   VGZA: "zacht",
@@ -352,22 +352,22 @@ export const ROCK_HARDNESS: Record<string, string> = {
   VGEH: "extreem hard",
 };
 
-// Table 2.31: Hoeveelheid schelpmateriaal
+/** Table 2.31: Hoeveelheid schelpmateriaal */
 export const SHELL_CONTENT: Record<string, string> = {
-  SCH0: "geen schelpmateriaal",
-  SCH1: "spoor schelpmateriaal",
-  SCH2: "weinig schelpmateriaal",
-  SCH3: "veel schelpmateriaal",
+  SCH0: "geen schelpmateriaal", // 0%
+  SCH1: "spoor schelpmateriaal", // < 1%
+  SCH2: "weinig schelpmateriaal", // < 1 - 10%
+  SCH3: "veel schelpmateriaal", // 10 - 30$%
 };
 
-// Table 2.32: Kalkgehalte
+/** Table 2.32: Kalkgehalte conform NEN 5104 (NNI, 1989, par. 5.1) */
 export const CALCIUM_CONTENT: Record<string, string> = {
   CA1: "kalkloos",
   CA2: "kalkarm",
   CA3: "kalkrijk",
 };
 
-// Table 2.33: Glauconietgehalte
+/** Table 2.33: Glauconietgehalte */
 export const GLAUCONITE_CONTENT: Record<string, string> = {
   GC0: "geen glauconiet",
   GC1: "spoor glauconiet",
@@ -377,7 +377,7 @@ export const GLAUCONITE_CONTENT: Record<string, string> = {
   GC5: "uiterst veel glauconiet",
 };
 
-// Table 2.34: Antropogene bijmengingen
+/** Table 2.34: Antropogene bijmengingen */
 export const ANTHROPOGENIC_ADMIXTURES: Record<string, string> = {
   BST1: "spoor baksteen",
   BST2: "weinig baksteen",
@@ -399,7 +399,7 @@ export const ANTHROPOGENIC_ADMIXTURES: Record<string, string> = {
   SE: "silex",
 };
 
-// Table 2.35: Gelaagdheid
+/** Table 2.35: Gelaagdheid */
 export const LAYERING: Record<string, string> = {
   BIO: "bioturbatie",
   DWO: "doorworteling",
@@ -427,7 +427,13 @@ export const LAYERING: Record<string, string> = {
   STSC: "met schelpenlagen",
 };
 
-// Table 2.36: Geologische interpretatie
+/** Table 2.36: Geologische interpretatie
+ * 
+ * In de NEN 5104 is vastgelegd dat de classificatie van grondsoorten uitsluitend plaats vindt op basis
+ * van de fracties die in de classificatiedriehoeken zijn vastgelegd. Daarmee is het niet meer mogelijk om
+ * een aantal termen te gebruiken die traditioneel vaak in boorbeschrijvingen werden gebruikt. Een aantal
+ * van deze termen zijn hieronder opgenomen.
+ */
 export const GEOLOGICAL_INTERPRETATION: Record<string, string> = {
   ANT: "Antropogeen",
   BOO: "Boomse klei",
@@ -438,7 +444,13 @@ export const GEOLOGICAL_INTERPRETATION: Record<string, string> = {
   WAR: "warven",
 };
 
-// Table 2.37: Stratigrafische eenheden
+/**
+ * Table 2.37: Stratigrafische eenheden. The spec's table is only a sample;
+ * the rest follows the TNO-NITG lithostratigraphic nomenclature.
+ * BR/GE/DO collide with hoofdkleur codes (bruin/geel/donker) — in the generic
+ * qualifier lookup the colours win, so these three only resolve when this
+ * table is consulted directly.
+ */
 export const STRATIGRAPHIC_UNITS: Record<string, string> = {
   DR: "Formatie van Drente",
   EC: "Formatie van Echteld",
@@ -447,13 +459,44 @@ export const STRATIGRAPHIC_UNITS: Record<string, string> = {
   NI: "Formatie van Nieuwkoop",
   TW: "Formatie van Twente",
   WA: "Formatie van Waalre",
+  // Our additions
+  AP: "Formatie van Appelscha",
+  BE: "Formatie van Beegden",
+  BR: "Formatie van Breda",
+  BX: "Formatie van Boxtel",
+  DN: "Formatie van Drachten",
+  DO: "Formatie van Dongen",
+  EE: "Eem Formatie",
+  GE: "Door landijs gestuwde afzettingen",
+  IE: "Formatie van Inden",
+  KI: "Kiezeloöliet Formatie",
+  KW: "Formatie van Koewacht",
+  MS: "Formatie van Maassluis",
+  OO: "Formatie van Oosterhout",
+  PE: "Formatie van Peelo",
+  RU: "Rupel Formatie",
+  ST: "Formatie van Sterksel",
+  SY: "Formatie van Stramproy",
+  TO: "Formatie van Tongeren",
+  UR: "Formatie van Urk",
+  WB: "Formatie van Woudenberg",
 };
 
-// Combined lookup for all codes
-const ALL_CODES: Record<string, string> = {
+// The first text field of a layer is always the grondsoort (§2.3.1.3), so the
+// whole-token lithology lookup only consults the soil tables.
+const LITHOLOGY_CODES: Record<string, string> = {
   ...NEN5104_SOIL_CODES,
   ...NON_STANDARD_SOIL_CODES,
   ...ADDITIONAL_SOIL_CODES,
+};
+
+// The remaining code fields carry no positional meaning — the spec (§2.3)
+// processes them first-in-first-out, identified by spelling alone — so
+// qualifiers get one flat dictionary over every table.
+const QUALIFIER_CODES: Record<string, string> = {
+  ...LITHOLOGY_CODES,
+  // Stratigraphy before the colours: BR/GE/DO must resolve as bruin/geel/donker
+  ...STRATIGRAPHIC_UNITS,
   ...SECONDARY_COLORS,
   ...MAIN_COLORS,
   ...SAND_MEDIAN_CLASSES,
@@ -472,7 +515,6 @@ const ALL_CODES: Record<string, string> = {
   ...ANTHROPOGENIC_ADMIXTURES,
   ...LAYERING,
   ...GEOLOGICAL_INTERPRETATION,
-  ...STRATIGRAPHIC_UNITS,
 };
 
 // --- Lookups derived from the vocabulary (never hand-maintained) -------------
@@ -689,9 +731,12 @@ function capitalize(text: string): string {
   return text.length > 0 ? text.charAt(0).toUpperCase() + text.slice(1) : text;
 }
 
-/** Look a single code up in the combined dictionary (case-tolerant). */
-function lookupCode(code: string): string | undefined {
-  return ALL_CODES[code.toUpperCase()] ?? ALL_CODES[code];
+/** Look a single code up in a code dictionary (case-tolerant). */
+function lookupCode(
+  dictionary: Record<string, string>,
+  code: string,
+): string | undefined {
+  return dictionary[code.toUpperCase()] ?? dictionary[code];
 }
 
 /**
@@ -721,14 +766,16 @@ function admixtureGradeWord(
  * "Klei, zwak siltig, sterk humeus").
  */
 function describeLithology({ lithology, main, admixtures }: SoilCode): string {
-  const whole = lookupCode(lithology);
+  const whole = lookupCode(LITHOLOGY_CODES, lithology);
   if (whole !== undefined) {
     return whole;
   }
 
   const mainName = main ? NEN5104_MAIN_SOILS[main] : undefined;
   if (mainName === undefined) {
-    return lithology; // special/unknown — nothing to compose
+    // Not a soil code at all — a lone qualifier (colour, layering, ...) still
+    // decodes; only a genuinely unknown token passes through verbatim.
+    return lookupCode(QUALIFIER_CODES, lithology) ?? lithology;
   }
 
   const parts = [capitalize(mainName)];
@@ -755,7 +802,7 @@ export function describeSoilCode(soil: SoilCode): string {
   const parts = [describeLithology(soil)];
 
   for (const qualifier of soil.qualifiers) {
-    parts.push(lookupCode(qualifier) ?? qualifier);
+    parts.push(lookupCode(QUALIFIER_CODES, qualifier) ?? qualifier);
   }
 
   return parts.join(", ");

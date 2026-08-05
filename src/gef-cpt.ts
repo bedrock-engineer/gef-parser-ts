@@ -4,10 +4,12 @@ import {
   checkDuplicateQuantities,
   parseGefRecords,
   processCommonFields,
+} from "./gef-common.js";
+import type {
   ProcessedMeasurement,
   ProcessedText,
-  type GEFHeadersMap,
-  type ProcessedCptMetadata,
+  GEFHeadersMap,
+  ProcessedCptMetadata,
 } from "./gef-common.js";
 import {
   cptColumnQuantities,
@@ -26,12 +28,8 @@ import {
   getMeasurementTextKey,
   getMeasurementVarKey,
 } from "./gef-measurement-mappings.js";
-import {
-  parseGefCptHeaders,
-  SpecimenVar,
-  type ColumnInfo,
-  type GefCptHeaders,
-} from "./gef-schemas.js";
+import { parseGefCptHeaders } from "./gef-schemas.js";
+import type { SpecimenVar, ColumnInfo, GefCptHeaders } from "./gef-schemas.js";
 import type { GefWarning } from "./gef-warnings.js";
 import {
   describeSoilCode,
@@ -228,16 +226,7 @@ export function parsePreExcavationLayers(
 }
 
 export type Unit =
-  | "m"
-  | "MPa"
-  | "%"
-  | "degrees"
-  | "kN/m³"
-  | "S/m"
-  | "nT"
-  | "°C"
-  | "s"
-  | "-";
+  "m" | "MPa" | "%" | "degrees" | "kN/m³" | "S/m" | "nT" | "°C" | "s" | "-";
 
 /**
  * Detect which GEF extension is used based on file headers
@@ -343,8 +332,7 @@ export function findCptMeasurementVariable(
   const variables = getCptMeasurementVariablesForExtension(extension);
   // Indexing by an arbitrary id can miss; the lookup is genuinely optional.
   return variables[id as keyof typeof variables] as
-    | (typeof variables)[keyof typeof variables]
-    | undefined;
+    (typeof variables)[keyof typeof variables] | undefined;
 }
 
 /**
@@ -550,10 +538,4 @@ export function findColumnByQuantity(
   return columns.find((col) => col.quantityNumber === quantityNumber);
 }
 
-const DEPTH_KEYWORDS = [
-  "penetration",
-  "sondeer",
-  "length",
-  "diepte",
-  "lengte",
-];
+const DEPTH_KEYWORDS = ["penetration", "sondeer", "length", "diepte", "lengte"];

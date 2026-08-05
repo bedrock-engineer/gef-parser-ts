@@ -8,7 +8,7 @@ import {
 import {
   boreMeasurementTextVariables,
   boreMeasurementVariables,
-  SpecimenCode,
+  type SpecimenCode,
 } from "./gef-bore-spec.js";
 import type {
   ProcessedBoreMetadata,
@@ -20,13 +20,13 @@ import {
   getMeasurementTextKey,
   getMeasurementVarKey,
 } from "./gef-measurement-mappings.js";
-import {
+import { parseGefBoreHeaders } from "./gef-schemas.js";
+import type {
   MeasurementText,
   MeasurementVar,
-  parseGefBoreHeaders,
-  type GefBoreHeaders,
-  type SpecimenText,
-  type SpecimenVar,
+  GefBoreHeaders,
+  SpecimenText,
+  SpecimenVar,
 } from "./gef-schemas.js";
 import type { GefWarning } from "./gef-warnings.js";
 
@@ -208,10 +208,11 @@ function hydrateSoil(
   additionalCodes: Array<string>,
 ): { soil: SoilCode; soilText: string } {
   const soil = parseSoilCode(soilCode);
-  const soilText = [soilCode, ...additionalCodes]
-    .filter((code) => code.length > 0)
-    .map((code) => decodeBoreCode(code))
-    .join(", ");
+  // Decode the layer as one code string, so only the leading token sits in
+  // the grondsoort position and every following code decodes as a qualifier.
+  const soilText = decodeBoreCode(
+    [soilCode, ...additionalCodes].filter((code) => code.length > 0).join(" "),
+  );
   return { soil, soilText };
 }
 

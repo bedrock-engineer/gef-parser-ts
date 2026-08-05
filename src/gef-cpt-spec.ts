@@ -1,4 +1,4 @@
-import { Unit } from "./gef-cpt.js";
+import type { Unit } from "./gef-cpt.js";
 import {
   heightDeterminationCodes,
   placeDeterminationCodes,

@@ -1,5 +1,5 @@
 import z from "zod";
-import { convertToWGS84, WGS84Coords } from "./coordinates.js";
+import { convertToWGS84, type WGS84Coords } from "./coordinates.js";
 import {
   parseGefBoreData,
   processBoreMetadata,
