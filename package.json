@@ -37,11 +37,15 @@
     "dist",
     "src"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc && mkdir -p dist/wasm && cp src/wasm/* dist/wasm/",
     "dev": "tsc --watch",
     "test": "npm run build && node test/test.js",
     "prepublishOnly": "npm run build",
+    "release": "GITHUB_TOKEN=$(gh auth token) release-it",
     "knip": "knip",
     "lint": "eslint src",
     "format": "prettier -w src"
@@ -57,6 +61,7 @@
     "eslint-package-json": "^0.3.0",
     "knip": "^5.73.3",
     "prettier": "^3.9.5",
+    "release-it": "^21.0.2",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.66.0"
   },

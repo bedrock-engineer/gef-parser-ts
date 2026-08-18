@@ -1,0 +1,57 @@
+diff --git a/src/error.rs b/src/error.rs
+index 7b9e50a..9a959b0 100644
+--- a/src/error.rs
++++ b/src/error.rs
+@@ -1,8 +1,5 @@
+ //! Error primitives.
+ 
+-use pyo3::{PyErr, exceptions::PyException};
+-use std::convert::From;
+-
+ /// Alias result to always return our own error type.
+ pub(crate) type Result<T> = std::result::Result<T, Error>;
+ 
+@@ -14,9 +11,3 @@ pub enum Error {
+     #[error("error while parsing \"{0}\"")]
+     Parsing(String),
+ }
+-
+-impl From<Error> for PyErr {
+-    fn from(err: Error) -> PyErr {
+-        PyException::new_err(err.to_string())
+-    }
+-}
+diff --git a/src/lib.rs b/src/lib.rs
+index 5a40f70..ea45a1b 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -17,7 +17,6 @@ pub mod error;
+ mod header;
+ 
+ use itertools::Itertools;
+-use pyo3::prelude::*;
+ use std::collections::HashMap;
+ 
+ use crate::{error::Result, header::Header};
+@@ -44,21 +43,6 @@ pub fn parse(gef: &'_ str) -> Result<(&'_ str, HeaderMap<'_>)> {
+     Ok((data, headers_map))
+ }
+ 
+-// Python wrapper around the parse function.
+-#[pyfunction]
+-fn gef_to_map(gef: &'_ str) -> PyResult<(&'_ str, HeaderMap<'_>)> {
+-    // Map the error to a python error
+-    parse(gef).map_err(|err| err.into())
+-}
+-
+-/// The python module.
+-#[pymodule]
+-fn gef_file_to_map(module: &Bound<'_, PyModule>) -> PyResult<()> {
+-    module.add_function(pyo3::wrap_pyfunction!(gef_to_map, module)?)?;
+-
+-    Ok(())
+-}
+-
+ #[cfg(test)]
+ mod tests {
+     #[test]

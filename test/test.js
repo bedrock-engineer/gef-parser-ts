@@ -12,8 +12,7 @@ import initGefFileToMap from '../dist/wasm/gef_file_to_map.js';
 
 // Import the parser
 import { parseGefFile } from '../dist/index.js';
-import { parseSoilCode, decodeBoreCode } from '../dist/bore-codes.js';
-import { getSoilColor } from '../dist/bore.js';
+import { parseSoilCode, parseSoilDescription, decodeBoreCode, describeSoilCode, getSoilCodeFromDescription, NEN5104_SOIL_CODES } from '../dist/bore-codes.js';
 
 // Initialize WASM with the file buffer (for Node.js)
 const wasmPath = join(__dirname, '../dist/wasm/gef_file_to_map_bg.wasm');
@@ -83,6 +82,87 @@ describe('CPT (example_cpt.gef)', async () => {
     const missing = cpt.warnings.filter(w => w.type === 'missingRequiredColumn');
     assert.equal(missing.length, 0);
   });
+
+  test('pre-excavation layers are hydrated like borehole soils', () => {
+    const layers = cpt.processed.preExcavationLayers;
+    assert.equal(layers.length, 3);
+    // "matig vast klei zwak siltig": "matig vast" is consistency, not admixture
+    assert.equal(layers[0].soilCode, 'Ks1');
+    assert.equal(layers[0].soil.main, 'K');
+    assert.deepEqual(layers[0].soil.admixtures, [{ letter: 's', grade: 1 }]);
+    assert.equal(layers[0].soilText, 'Klei, zwak siltig');
+    assert.equal(layers[1].soilCode, 'Lz1');
+    // "matig fijn" is a grain-size class, not an admixture grade
+    assert.equal(layers[2].soilCode, 'Zs1');
+  });
+});
+
+describe('soil description parsing (parseSoilDescription)', () => {
+  test('returns the structure directly, lithology is the derived code', () => {
+    const soil = parseSoilDescription('klei zwak siltig, sterk humeus');
+    assert.equal(soil.lithology, 'Ks1h3');
+    assert.equal(soil.main, 'K');
+    assert.deepEqual(soil.admixtures, [
+      { letter: 's', grade: 1 },
+      { letter: 'h', grade: 3 },
+    ]);
+  });
+
+  test('a description that already is a code parses as that code', () => {
+    const soil = parseSoilDescription('Kz2');
+    assert.equal(soil.lithology, 'Kz2');
+    assert.deepEqual(soil.admixtures, [{ letter: 'z', grade: 2 }]);
+  });
+});
+
+describe('soil code from description (getSoilCodeFromDescription)', () => {
+  test('main soil with graded admixture', () => {
+    assert.equal(getSoilCodeFromDescription('klei sterk humeus'), 'Kh3');
+    assert.equal(getSoilCodeFromDescription('leem zwak zandig'), 'Lz1');
+  });
+
+  test('adjectives do not hijack the main soil', () => {
+    // "kleiig" must not match as main soil "klei"
+    assert.equal(getSoilCodeFromDescription('Zand, zwak kleiig'), 'Zk1');
+    assert.equal(getSoilCodeFromDescription('veen zwak zandig'), 'Vz1');
+  });
+
+  test('multiple admixtures accumulate in source order', () => {
+    assert.equal(
+      getSoilCodeFromDescription('zand, uiterst grindig, zwak humeus'),
+      'Zg4h1',
+    );
+  });
+
+  test('ungraded adjective becomes an ungraded letter', () => {
+    assert.equal(getSoilCodeFromDescription('klei zandig'), 'Kz');
+    assert.equal(getSoilCodeFromDescription('veen mineraalarm'), 'Vm');
+  });
+
+  test('non-standard synonyms map to standard letters', () => {
+    assert.equal(getSoilCodeFromDescription('zand zwak lemig'), 'Zs1');
+    assert.equal(getSoilCodeFromDescription('klei matig venig'), 'Kh2');
+  });
+
+  test('inflected adjective-first phrasing is recognised', () => {
+    assert.equal(getSoilCodeFromDescription('sterk zandige klei'), 'Kz3');
+    assert.equal(getSoilCodeFromDescription('humeuze klei'), 'Kh');
+    assert.equal(getSoilCodeFromDescription('zwak siltige leem'), 'L');
+  });
+
+  test('adjectives restating the main soil are skipped', () => {
+    assert.equal(getSoilCodeFromDescription('leem zwak lemig'), 'L');
+    assert.equal(getSoilCodeFromDescription('veen sterk humeus'), 'V');
+  });
+
+  test('a description that already is a code passes through', () => {
+    assert.equal(getSoilCodeFromDescription('Kz2'), 'Kz2');
+    assert.equal(getSoilCodeFromDescription('NBE'), 'NBE');
+  });
+
+  test('unrecognised text falls back to NBE', () => {
+    assert.equal(getSoilCodeFromDescription('puin'), 'NBE');
+  });
 });
 
 describe('BORE (example_bore.gef)', async () => {
@@ -111,6 +191,30 @@ describe('BORE (example_bore.gef)', async () => {
 
   test('layer 2 description contains "Veen"', () => {
     assert.ok(bore.layers[2].description?.includes('Veen'));
+  });
+
+  test('first layer is hydrated: soil structure from soilCode', () => {
+    const soil = bore.layers[0].soil;
+    assert.equal(soil.main, 'K');
+    assert.deepEqual(soil.admixtures, [
+      { letter: 's', grade: 2 },
+      { letter: 'h', grade: 1 },
+    ]);
+  });
+
+  test('first layer soilText is the decoded Dutch description', () => {
+    assert.ok(
+      bore.layers[0].soilText.startsWith('Klei, matig siltig, zwak humeus'),
+    );
+  });
+
+  test('soilText excludes the free-text driller remark (stays in description)', () => {
+    const layer = bore.layers[2];
+    // The remark lives in `description`, not in the decoded `soilText`.
+    assert.ok(layer.description?.includes('Veen van NAP'));
+    assert.ok(!layer.soilText.includes('Veen van NAP'));
+    // Coded additions (layering, shells, stratigraphy) DO decode into soilText.
+    assert.ok(layer.soilText.includes('met zandlagen'));
   });
 
   test('company name is GeoDelft', () => {
@@ -222,25 +326,47 @@ describe('soil code decoding (decodeBoreCode)', () => {
   test('unrecognized code is returned unchanged', () => {
     assert.equal(decodeBoreCode('QQ'), 'QQ');
   });
+
+  test('veen grade 3 composes as "matig" per Tabel 2.15', () => {
+    assert.equal(decodeBoreCode('Vk3'), 'Veen, matig kleiig');
+    assert.equal(decodeBoreCode('Vk3h2'), 'Veen, matig kleiig, matig humeus');
+    assert.equal(decodeBoreCode('Vz3g1'), 'Veen, matig zandig, zwak grindig');
+  });
+
+  test('describeSoilCode renders an already-parsed code identically', () => {
+    assert.equal(
+      describeSoilCode(parseSoilCode('Zs1 GCZ')),
+      decodeBoreCode('Zs1 GCZ'),
+    );
+  });
+
+  test('stratigraphic unit qualifier is decoded', () => {
+    assert.equal(decodeBoreCode('Zs1 BX'), 'Zand, zwak siltig, Formatie van Boxtel');
+    assert.equal(decodeBoreCode('Ks1 EE'), 'Klei, zwak siltig, Eem Formatie');
+  });
+
+  test('colour qualifiers win the BR/GE/DO collision with stratigraphy', () => {
+    assert.equal(decodeBoreCode('Ks1 GE'), 'Klei, zwak siltig, geel');
+    assert.equal(decodeBoreCode('Zs1 BR'), 'Zand, zwak siltig, bruin');
+    assert.equal(decodeBoreCode('Vm DO GN'), 'Veen, mineraalarm, donker, groen');
+  });
+
+  test('a lone non-soil dictionary code still decodes', () => {
+    assert.equal(decodeBoreCode('STZL'), 'met zandlagen');
+    assert.equal(decodeBoreCode('GE'), 'geel');
+    assert.equal(decodeBoreCode('NA'), 'Formatie van Naaldwijk');
+  });
 });
 
-describe('soil colour (getSoilColor)', () => {
-  test('exact curated shade wins', () => {
-    assert.equal(getSoilColor('Kz3g2'), '#4B3315');
-    assert.equal(getSoilColor('NBE'), '#808080');
-  });
-
-  test('graded shade reconstructed from structure for composite code', () => {
-    // "Ks2h1" has no exact entry; the "Ks2" shade is found via its structure.
-    assert.equal(getSoilColor('Ks2h1'), '#7B6345');
-  });
-
-  test('falls back to main soil base colour', () => {
-    assert.equal(getSoilColor('Zk'), '#FFE4A8'); // base Z; "Zk" has no exact entry
-  });
-
-  test('special / unknown code falls back to grey', () => {
-    assert.equal(getSoilColor('GM'), '#808080');
-    assert.equal(getSoilColor('QQ'), '#CCCCCC');
-  });
+describe('Tabel 2.15 text matches the composed grammar', () => {
+  // Appending a toevoeging forces the compose path (the bare code hits the
+  // whole-token lookup), so this catches any drift between the verbatim spec
+  // table and the vocabulary-based composition.
+  for (const [code, text] of Object.entries(NEN5104_SOIL_CODES)) {
+    if (parseSoilCode(code).main === '') continue; // GM, NBE, g1..h3
+    test(`${code}h2 composes to "${text}, matig humeus"`, () => {
+      assert.equal(decodeBoreCode(`${code}h2`), `${text}, matig humeus`);
+    });
+  }
 });
+
